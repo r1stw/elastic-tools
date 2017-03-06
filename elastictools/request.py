@@ -75,6 +75,10 @@ def flt_eq(field, value):
     return {"term": {field: value}}
 
 
+def flt_exists(field):
+    return {"exists": {"field": field}}
+
+
 def flt_range(field, left=None, right=None, left_is_strict=False, right_is_strict=False):
     return {"range": {field: {**({"gt" + ("" if left_is_strict else "e"): left} if left is not None else {}), **({ "lt" + ("" if right_is_strict else "e"): right} if right is not None else {})}}}
 
