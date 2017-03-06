@@ -100,19 +100,19 @@ def agg_terms(field, script=False, size=10000, min_doc_count=None, order=None):
 
 
 def agg_sum(field, script=False):
-    return {"sum": {"script" if script else "field": script}}
+    return {"sum": {("script" if script else "field"): field}}
 
 
 def agg_avg(field, script=False):
-    return {"avg": {"script" if script else "field": script}}
+    return {"avg": {("script" if script else "field"): field}}
 
 
 def agg_min(field, script=False):
-    return {"min": {"script" if script else "field": script}}
+    return {"min": {("script" if script else "field"): field}}
 
 
 def agg_max(field, script=False):
-    return {"max": {"script" if script else "field": script}}
+    return {"max": {("script" if script else "field"): field}}
 
 
 def agg_top_hits(size, sorting=None, fields=None):
