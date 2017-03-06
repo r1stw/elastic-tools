@@ -1,11 +1,11 @@
 from setuptools import setup
 
-setup(name='elastic-tools',
+setup(name='elastictools',
       version='0.0.0',
       description='Elastic search requests wrapper',
-      url='https://github.com/pleskanovsky/elastic-tools',
+      url='https://github.com/pleskanovsky/elastictools',
       author='pleskanovsky',
       author_email='vnezapno.pochta@gmail.com',
       license='MIT',
-      packages=['elastic-tools'],
+      packages=['elastictools'],
       zip_safe=False)
