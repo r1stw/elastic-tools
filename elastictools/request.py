@@ -149,3 +149,7 @@ def agg_top_hits(size, sorting=None, fields=None):
 
 def agg_histogram(field, interval, date_histogram=False):
     return {"date_histogram" if date_histogram else "histogram": {"field": field, "interval": interval}}
+
+
+def agg_extended_stats(field, script=False,  sigma=2):
+    return {"extended_stats": {("script" if script else "field"): field, "sigma": sigma}}
