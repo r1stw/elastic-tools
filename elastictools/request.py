@@ -138,29 +138,49 @@ def agg_cardinality(field, getter_name=None):
 
 @i_can_has_children
 def agg_terms(field, script=False, size=10000, min_doc_count=None, order=None, getter_doc_count=None, getter_key=None, **kwargs):
-    getters = generate_getter({}, getter_doc_count, "doc_count")
+    def getter(request_body):
+        return request_body["buckets"]
+    getters = {"self": getter}
+    getters = generate_getter(getters, getter_doc_count, "doc_count")
     getters = generate_getter(getters, getter_key, "key")
     if order is None:
         order = {"_count": "desc"}
-    return {"terms": {**{"script" if script else "field": field, "size": size},
+    body = {"terms": {**{"script" if script else "field": field, "size": size},
                       **({"min_doc_count": min_doc_count} if min_doc_count is not None else {}),
                       **({"order": order} if order is not None else {})}}
+    return {"body": body, "getters": getters}
 
 
 def agg_sum(field, script=False):
-    return {"sum": {("script" if script else "field"): field}}
+    def getter(request_body):
+        return request_body["value"]
+    body = {"sum": {("script" if script else "field"): field}}
+    getters = {"self": getter}
+    return {"body": body, "getters": getters}
 
 
 def agg_avg(field, script=False):
-    return {"avg": {("script" if script else "field"): field}}
+    def getter(request_body):
+        return request_body["value"]
+    body = {"avg": {("script" if script else "field"): field}}
+    getters = {"self": getter}
+    return {"body": body, "getters": getters}
 
 
 def agg_min(field, script=False):
-    return {"min": {("script" if script else "field"): field}}
+    def getter(request_body):
+        return request_body["value"]
+    body = {"min": {("script" if script else "field"): field}}
+    getters = {"self": getter}
+    return {"body": body, "getters": getters}
 
 
 def agg_max(field, script=False):
-    return {"max": {("script" if script else "field"): field}}
+    def getter(request_body):
+        return request_body["value"]
+    body = {"max": {("script" if script else "field"): field}}
+    getters = {"self": getter}
+    return {"body": body, "getters": getters}
 
 
 @i_can_has_children
