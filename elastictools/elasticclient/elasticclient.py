@@ -6,7 +6,7 @@ connections = {}
 
 
 class AuthType(Enum):
-    BY_LOGIN = "bylogin",
+    BY_LOGIN = "byLogin",
     BY_HOST = "byHost"
 
 
