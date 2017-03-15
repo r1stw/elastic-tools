@@ -35,7 +35,15 @@ def bucket_agg(func):
     return decorated_agg
 
 
-def request(query, fieldlist=None, sorting=None, **aggs):
+def request(query=None, fieldlist=None, sorting=None, **aggs):
+    """
+    Creates core request body. \n
+    :param query: Pure JSON query body. Empty by default. \n
+    :param fieldlist: List of fields to write in "_source". Empty by default, which means that all source fields will be included in response hits \n
+    :param sorting: Sorting dict, {"filed1": "asc", "field2": "desc} for example \n
+    :param aggs: Aggregation objects provided by agg functions \n
+    :return: {"body": %plain json request%, "getters": %dictionary of named getters%} \n
+    """
     aggs_bodys = {key: aggs[key]["body"] for key in aggs}
     body = {
         **(
@@ -289,31 +297,3 @@ def agg_extended_stats(field, script=False, sigma=3,
 
     return {"body": body, "getters": getters}
 
-
-# test code
-if __name__ == "__main__":
-    req = request({}, test=agg_filter(
-        flt_eq("env", "prod"),
-        unique=agg_cardinality("p", getter="MASHEN'KA")
-    ))
-    y = req["body"]
-    json_output = {
-       "took": 311,
-       "timed_out": False,
-       "_shards": {
-          "total": 31,
-          "successful": 31,
-          "failed": 0
-       },
-
-       "aggregations": {
-          "test": {
-             "doc_count": 17511389,
-             "unique": {
-                "value": 1616002
-             }
-          }
-       }
-    }
-    x = req["getters"]["MASHEN'KA"](json_output)
-    print(req)
