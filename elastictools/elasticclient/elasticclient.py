@@ -10,6 +10,19 @@ class AuthType(Enum):
     BY_HOST = "byHost"
 
 
+class Response:
+    def __init__(self, request):
+        self.request_body = request["body"]
+        self.getters_dict = request["getters"]
+        self.getters = object()
+        for getter in self.getters_dict:
+            def new_getter(*args, **kwargs):
+                return self.getters_dict[getter](self.response_body, *args, **kwargs)
+            self.getters_dict[getter] = new_getter
+            setattr(self.getters, getter, self.getters_dict[getter])
+        self.response_body = None
+
+
 class Credentials:
     def __init__(self, p_json, name):
         self.name = name
@@ -53,7 +66,11 @@ def search(connection_name="default", **kwargs):
     connection = connections[connection_name]
     if connection.connection is None:
         connection.get_connection()
-    return connection.connection.search(**kwargs)
+    result = Response(kwargs["body"])
+    if kwargs["body"] is not None:
+        kwargs["body"] = kwargs["body"]["body"]
+    result.response_body = connection.connection.search(**kwargs)
+    return result
 
 
 
