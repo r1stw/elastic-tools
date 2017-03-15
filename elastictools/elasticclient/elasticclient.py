@@ -6,7 +6,7 @@ connections = {}
 
 
 class AuthType(Enum):
-    BY_LOGIN = "byLogin",
+    BY_LOGIN = "byLogin"
     BY_HOST = "byHost"
 
 
@@ -14,8 +14,8 @@ class Credentials:
     def __init__(self, p_json, name):
         self.name = name
         self.host = p_json["host"]
-        self.auth_type = AuthType[p_json["auth_type"]]
-        if self.auth_type == AuthType.BY_LOGIN:
+        self.auth_type = p_json["auth_type"]
+        if self.auth_type == AuthType.BY_LOGIN.value:
             self.login = p_json["login"]
             self.password = p_json["password"]
         self.connection = None
