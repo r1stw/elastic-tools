@@ -230,29 +230,31 @@ def generate_getter(getters, getter_name, field_name, buckets_name="buckets"):
     return getters
 
 
-req = request({}, test=agg_filter(
-    flt_eq("env", "prod"),
-    unique=agg_cardinality("p", getter_name="MASHEN'KA")
-))
-y = req["body"]
-# x = req["aggs"]["test"]["getters"]["MASHEN'KA"]
-json_output = {
-   "took": 311,
-   "timed_out": False,
-   "_shards": {
-      "total": 31,
-      "successful": 31,
-      "failed": 0
-   },
+# test code
+if __name__ == "__main__":
+    req = request({}, test=agg_filter(
+        flt_eq("env", "prod"),
+        unique=agg_cardinality("p", getter_name="MASHEN'KA")
+    ))
+    y = req["body"]
+    # x = req["aggs"]["test"]["getters"]["MASHEN'KA"]
+    json_output = {
+       "took": 311,
+       "timed_out": False,
+       "_shards": {
+          "total": 31,
+          "successful": 31,
+          "failed": 0
+       },
 
-   "aggregations": {
-      "test": {
-         "doc_count": 17511389,
-         "unique": {
-            "value": 1616002
-         }
-      }
-   }
-}
-x = req["getters"]["MASHEN'KA"](json_output)
-print(req)
+       "aggregations": {
+          "test": {
+             "doc_count": 17511389,
+             "unique": {
+                "value": 1616002
+             }
+          }
+       }
+    }
+    x = req["getters"]["MASHEN'KA"](json_output)
+    print(req)
