@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(name='elastictools',
       version='0.0.1',
@@ -7,5 +7,5 @@ setup(name='elastictools',
       author='pleskanovsky',
       author_email='vnezapno.pochta@gmail.com',
       license='MIT',
-      packages=['elastictools'],
+      packages=find_packages(),
       zip_safe=False)
