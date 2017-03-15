@@ -12,9 +12,11 @@ class AuthType(Enum):
 
 class Response:
     def __init__(self, request):
+        class Getters(object):
+            pass
         self.request_body = request["body"]
         self.getters_dict = request["getters"]
-        self.getters = object()
+        self.getters = Getters()
         for getter in self.getters_dict:
             def new_getter(*args, **kwargs):
                 return self.getters_dict[getter](self.response_body, *args, **kwargs)
