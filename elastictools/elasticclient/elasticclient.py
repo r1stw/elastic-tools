@@ -53,7 +53,7 @@ def get_credentials(path_to_credentials_file):
         connections[x.name] = x
 
     if "default" not in connections:
-        connections["default"] = next(iter(connections))
+        connections["default"] = connections[next(iter(connections))]
     else:
         print("Warning: pre-defined \"default\" credentials found. Reassinging default in runtime will override them")
 
