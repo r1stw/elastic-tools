@@ -50,6 +50,7 @@ def get_credentials(path_to_credentials_file):
     connections = {}
     f = open(path_to_credentials_file, 'r')
     plain = json.load(f)
+    f.close()
     for option in plain:
         x = Credentials(plain[option], option)
         connections[x.name] = x
