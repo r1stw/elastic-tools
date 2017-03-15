@@ -66,3 +66,7 @@ Contacts
 ========================
 
 Feel free to join this `Discord server <https://discord.gg/sJvDuuj>` for support.
+
+Documentation
+========================
+http://elastic-tools.rtfd.io/
