@@ -15,11 +15,11 @@ class Response:
         class Getters(object):
             pass
         self.request_body = request["body"]
-        self.getters_dict = request["getters"]
+        self.getters_dict = {}
         self.getters = Getters()
-        for getter in self.getters_dict:
+        for getter in request["getters"]:
             def new_getter(*args, **kwargs):
-                return self.getters_dict[getter](self.response_body, *args, **kwargs)
+                return request["getters"][getter](self.response_body, *args, **kwargs)
             self.getters_dict[getter] = new_getter
             setattr(self.getters, getter, self.getters_dict[getter])
         self.response_body = None
