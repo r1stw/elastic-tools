@@ -10,17 +10,21 @@ class AuthType(Enum):
     BY_HOST = "byHost"
 
 
+
 class Response:
     def __init__(self, request):
-        class Getters(object):
-            pass
-        self.request_body = request["body"]
+        class Getters(object): pass
+        self.request = copy.deepcopy(request)
+        self.request_body = self.request["body"]
         self.getters_dict = {}
         self.getters = Getters()
+        self.getter = None
+        def getter_factory(key):
+            def result(*args, **kwargs):
+                return self.request["getters"][key](self.response_body, *args, **kwargs)
+            return result
         for getter in request["getters"]:
-            def new_getter(*args, **kwargs):
-                return request["getters"][getter](self.response_body, *args, **kwargs)
-            self.getters_dict[getter] = new_getter
+            self.getters_dict[getter] = getter_factory(getter)
             setattr(self.getters, getter, self.getters_dict[getter])
         self.response_body = None
 
