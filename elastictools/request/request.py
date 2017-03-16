@@ -44,6 +44,8 @@ def request(query=None, fieldlist=None, sorting=None, **aggs):
     :param aggs: Aggregation objects provided by agg functions \n
     :return: {"body": %plain json request%, "getters": %dictionary of named getters%} \n
     """
+    if query is None:
+        query = {}
     aggs_bodys = {key: aggs[key]["body"] for key in aggs}
     body = {
         **(
