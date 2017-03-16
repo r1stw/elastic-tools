@@ -1,6 +1,7 @@
 from elasticsearch import Elasticsearch, RequestsHttpConnection
 import json
 from enum import Enum
+import copy
 
 connections = {}
 
