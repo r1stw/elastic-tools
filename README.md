@@ -4,10 +4,6 @@ Elastic tools
 Working with elasticsearch python library? Tired of creating queries as huge and totally unreadable plain json objects? Want to create
 requests and interpret result intuitively? We may have a solution **just for you.**
 
-What are you waiting for, just install it already:
-     
-     pip install git+https://github.com/pleskanovsky/elastic-tools
-     
 What can it do? Let's see:
 
 Basics
@@ -44,7 +40,7 @@ Say you got a nice request in json form:
 			  }
 		  }
 	  }
-  }
+    }
   
   Actually, it's not that nice and easy to read and edit, isn't it? What if we try to write this one using elastic-tools?
   
@@ -62,10 +58,21 @@ Say you got a nice request in json form:
        
 Looks way better, doesn't it?
 
-Contacts
-========================
 
-Feel free to join this `Discord server <https://discord.gg/sJvDuuj>` for support.
+What are you waiting for, just install it already:
+     
+     pip install git+https://github.com/pleskanovsky/elastic-tools
+     
+
+
+Contacts
+========
+
+Feel free to join this [Discord server](https://discord.gg/sJvDuuj) for support.
+
+
+
+
 
 Documentation
 ========================
