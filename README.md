@@ -46,6 +46,8 @@ Say you got a nice request in json form:
   
 
   
+      import elastictools.request as req 
+      
       x = req.request({}, filtered=req.agg(
         req.agg_filter(
           req.flt_and(
