@@ -165,15 +165,22 @@ def agg_filter(flt, getter_name=None, **kwargs):
 
 
 @bucket_agg
-def agg_terms(field, script=False, size=10000, min_doc_count=None, order=None, getter_doc_count=None, getter_key=None, **kwargs):
+def agg_terms(field, script=False, size=10000, min_doc_count=None, order=None, getter_doc_count=None, getter_key=None, is_axis=True, **kwargs):
     getters = {}
     add_getter(getters, getter_doc_count, "doc_count")
     add_getter(getters, getter_key, "key")
 
-    def getter_factory(key):
+    def getter_factory(key, bucket_id=None):
         def result(response_body, *args, **kwargs2):
             return [getters[key](bucket) for bucket in response_body["buckets"]]
-        return result
+
+        def result2(response_body, bucket_id, *args, **kwargs2):
+            return getters[key](response_body["buckets"][bucket_id])
+
+        if is_axis:
+            return result
+        else:
+            return result2
 
     for getter in getters:
         getters[getter] = getter_factory(getter)
