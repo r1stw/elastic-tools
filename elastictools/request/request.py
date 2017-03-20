@@ -170,9 +170,13 @@ def agg_terms(field, script=False, size=10000, min_doc_count=None, order=None, g
     add_getter(getters, getter_doc_count, "doc_count")
     add_getter(getters, getter_key, "key")
 
+    def getter_factory(key):
+        def result(response_body, *args, **kwargs2):
+            return [getters[key](bucket) for bucket in response_body["buckets"]]
+        return result
+
     for getter in getters:
-        getters[getter] = lambda response_body: [getters[getter](bucket) for bucket in response_body["buckets"]]
-        pass
+        getters[getter] = getter_factory(getter)
 
     def getter_updater(getter, key):
         def deeper_getter(response_body):
@@ -194,9 +198,13 @@ def agg_histogram(field, interval, getter_doc_count=None, getter_key=None, gette
     add_getter(getters, getter_key, "key")
     add_getter(getters, getter_key_as_string, "key_as_string")
 
+    def getter_factory(key):
+        def result(response_body, *args, **kwargs2):
+            return [getters[key](bucket) for bucket in response_body["buckets"]]
+        return result
+
     for getter in getters:
-        getters[getter] = lambda response_body: [getters[getter](bucket) for bucket in response_body["buckets"]]
-        pass
+        getters[getter] = getter_factory(getter)
 
     def getter_updater(getter, key):
         def deeper_getter(response_body):
