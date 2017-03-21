@@ -33,11 +33,11 @@ class Response:
             self.getters_dict[getter] = getter_factory(getter)
             setattr(self.getters, getter, self.getters_dict[getter])
         self.response_body = None
+        self.keys_iter()
 
     def keys_iter(self):
         self.axis_table = []
         self.__fill_axis_table(self.request["axis"](self.response_body), ())
-        return self.axis_table
 
     def __keys_iter(self, obj):
         if len(obj):
@@ -57,6 +57,10 @@ class Response:
                 self.__fill_axis_table(obj[key], tuple_draft_temp)
         else:
             self.axis_table.append(tuple_draft)
+
+    def line_iterator(self):
+        for addr in self.axis_table:
+            yield {getter: value(*addr) for getter, value in self.getters_dict.items()}
 
 
 
@@ -113,6 +117,10 @@ def search(connection_name="default", **kwargs):
         kwargs["body"] = kwargs["body"]["body"]
     result.response_body = connection.connection.search(**kwargs)
     return result
+
+
+
+
 
 
 
