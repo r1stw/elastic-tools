@@ -36,7 +36,8 @@ class Response:
 
     def keys_iter(self):
         self.axis_table = []
-        self.__fill_axis_table(self.response_body["axis"](), ())
+        self.__fill_axis_table(self.request["axis"](self.response_body), ())
+        return self.axis_table
 
     def __keys_iter(self, obj):
         if len(obj):
@@ -52,8 +53,8 @@ class Response:
     def __fill_axis_table(self, obj, tuple_draft):
         if len(obj) > 0:
             for key in obj:
-                tuple_draft += tuple(key)
-                self.__fill_axis_table(obj[key], tuple_draft)
+                tuple_draft_temp = (*tuple_draft, key)
+                self.__fill_axis_table(obj[key], tuple_draft_temp)
         else:
             self.axis_table.append(tuple_draft)
 
