@@ -21,12 +21,24 @@ def add_getter(getters, getter_name, field_name, additional_level=None):
 
 
 def agg(body):
-    aggs_bodys = {key: body["aggs"][key]["body"] for key in body["aggs"]}
-    getters = {getter: body["getter_updater"](body["aggs"][aggr]["getters"][getter], aggr) for aggr in body["aggs"] for getter in body["aggs"][aggr]["getters"] if getter != "self"}
+    getters = {}
+    aggs_bodys = {}
+    if "aggs" in body:
+        aggs_bodys = {key: body["aggs"][key]["body"] for key in body["aggs"]}
+        getters = {getter: body["getter_updater"](body["aggs"][aggr]["getters"][getter], aggr) for aggr in body["aggs"] for getter in body["aggs"][aggr]["getters"] if getter != "self"}
     getters.update(body["getters"])
+    axis = None
+    if "axis" in body:
+        child_axis = lambda x: {}
+        if "aggs" in body:
+            for child in body["aggs"]:
+                if "axis" in body["aggs"][child]:
+                    child_axis = body["aggs"][child]["axis"]
+                    break
+        axis = body["axis"](child_axis)
 
     body = {**body["body"], **({"aggs": aggs_bodys} if len(aggs_bodys) > 0 else {})}
-    return {"body": body, "getters": getters}
+    return {"body": body, "getters": getters, **({"axis": axis} if axis is not None else {})}
 
 
 def bucket_agg(func):
@@ -81,7 +93,11 @@ def request(query=None, fieldlist=None, sorting=None, **aggs):
             return p_getter(response_body["aggregations"][key])
         return deeper_getter
     getters = {key: getter_updater(aggs[aggr]["getters"][key], aggr) for aggr in aggs for key in aggs[aggr]["getters"]}
-    return {"body": body, "getters": getters}
+    axis = lambda x: {}
+    for agg2 in aggs:
+        if "axis" in aggs[agg2]:
+            axis = getter_updater(aggs[agg2]["axis"], agg2)
+    return {"body": body, "getters": getters, "axis": axis}
 
 
 ##############################################################################################
@@ -186,20 +202,33 @@ def agg_terms(field, script=False, size=10000, min_doc_count=None, order=None, g
         getters[getter] = getter_factory(getter)
 
     def getter_updater(getter, key):
-        def deeper_getter(response_body):
-            return [getter(bucket[key]) for bucket in getter(response_body["buckets"])]
-        return deeper_getter
+        def deeper_getter(response_body, *args, **kwargs2):
+            return [getter(bucket[key], *args, **kwargs2) for bucket in getter(response_body["buckets"])]
+        def deeper_getter2(response_body, bucket_id, *args, **kwargs2):
+            return getter(response_body["buckets"][bucket_id], *args, **kwargs2)
+
+        if is_axis:
+            return deeper_getter
+        else:
+            return deeper_getter2
 
     body = {"terms": {
         **{"script" if script else "field": field, "size": size},
         **({"min_doc_count": min_doc_count} if min_doc_count is not None else {}),
         **({"order": order} if order is not None else {})}
     }
-    return {"body": body, "getters": getters, "getter_updater": getter_updater, "aggs": kwargs}
+    if is_axis:
+        def axis_maker(child_axis):
+            def axis(response_body):
+                return {i: child_axis(response_body["buckets"][i]) for i in range(len(response_body["buckets"]))}
+
+        return {"body": body, "getters": getters, "getter_updater": getter_updater, "aggs": kwargs, "axis": axis_maker}
+    else:
+        return {"body": body, "getters": getters, "getter_updater": getter_updater, "aggs": kwargs}
 
 
 @bucket_agg
-def agg_histogram(field, interval, getter_doc_count=None, getter_key=None, getter_key_as_string=None, date_histogram=False, **kwargs):
+def agg_histogram(field, interval, getter_doc_count=None, getter_key=None, getter_key_as_string=None, date_histogram=False, is_axis=True, **kwargs):
     getters = {}
     add_getter(getters, getter_doc_count, "doc_count")
     add_getter(getters, getter_key, "key")
@@ -208,19 +237,40 @@ def agg_histogram(field, interval, getter_doc_count=None, getter_key=None, gette
     def getter_factory(key):
         def result(response_body, *args, **kwargs2):
             return [getters[key](bucket) for bucket in response_body["buckets"]]
-        return result
+
+        def result2(response_body, bucket_id, *args, **kwargs2):
+            return getters[key](response_body["buckets"][bucket_id])
+
+        if is_axis:
+            return result
+        else:
+            return result2
 
     for getter in getters:
         getters[getter] = getter_factory(getter)
 
     def getter_updater(getter, key):
-        def deeper_getter(response_body):
-            return [getter(bucket[key]) for bucket in getter(response_body["buckets"])]
-        return deeper_getter
+        def deeper_getter(response_body, *args, **kwargs2):
+            return [getter(bucket[key], *args, **kwargs2) for bucket in getter(response_body["buckets"])]
+
+        def deeper_getter2(response_body, bucket_id, *args, **kwargs2):
+            return getter(response_body["buckets"][bucket_id], *args, **kwargs2)
+
+        if is_axis:
+            return deeper_getter
+        else:
+            return deeper_getter2
 
     body = {"date_histogram" if date_histogram else "histogram": {"field": field, "interval": interval}}
 
-    return {"body": body, "getters": getters, "getter_updater": getter_updater, "aggs": kwargs}
+    if is_axis:
+        def axis_maker(child_axis):
+            def axis(response_body):
+                return {i: child_axis(response_body["buckets"][i]) for i in range(len(response_body["buckets"]))}
+
+        return {"body": body, "getters": getters, "getter_updater": getter_updater, "aggs": kwargs, "axis": axis_maker}
+    else:
+        return {"body": body, "getters": getters, "getter_updater": getter_updater, "aggs": kwargs}
 
 
 ##############################################################################################
