@@ -179,6 +179,7 @@ def agg_filter(flt, getter_name=None, **kwargs):
     def axis_maker(child_axis, key):
         def axis(response_body):
             return child_axis(response_body[key])
+        return axis
 
     body = {"filter": flt}
 
@@ -226,6 +227,7 @@ def agg_terms(field, script=False, size=10000, min_doc_count=None, order=None, g
         def axis_maker(child_axis, key):
             def axis(response_body):
                 return {i: child_axis(response_body["buckets"][i][key]) for i in range(len(response_body["buckets"]))}
+            return axis
 
         return {"body": body, "getters": getters, "getter_updater": getter_updater, "aggs": kwargs, "axis_maker": axis_maker}
     else:
@@ -272,6 +274,7 @@ def agg_histogram(field, interval, getter_doc_count=None, getter_key=None, gette
         def axis_maker(child_axis, key):
             def axis(response_body):
                 return {i: child_axis(response_body["buckets"][i][key]) for i in range(len(response_body["buckets"]))}
+            return axis
 
         return {"body": body, "getters": getters, "getter_updater": getter_updater, "aggs": kwargs, "axis_maker": axis_maker}
     else:
