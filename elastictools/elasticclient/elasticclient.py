@@ -12,22 +12,45 @@ class AuthType(Enum):
 
 
 
+
+
 class Response:
     def __init__(self, request):
         class Getters(object): pass
+
+        def getter_factory(key):
+            def result(*args, **kwargs):
+                return self.request["getters"][key](self.response_body, *args, **kwargs)
+            return result
+
         self.request = copy.deepcopy(request)
         self.request_body = self.request["body"]
         self.getters_dict = {}
         self.getters = Getters()
         self.getter = None
-        def getter_factory(key):
-            def result(*args, **kwargs):
-                return self.request["getters"][key](self.response_body, *args, **kwargs)
-            return result
+
         for getter in request["getters"]:
             self.getters_dict[getter] = getter_factory(getter)
             setattr(self.getters, getter, self.getters_dict[getter])
         self.response_body = None
+
+    def keys_iter(self):
+        return self.__keys_iter(self.request["axis"])
+
+    def __keys_iter(self, obj):
+        if len(obj):
+            for child_key in obj:
+                for temp in self.__keys_iter(obj[child_key]):
+                    if temp is not None:
+                        yield (child_key, *temp)
+                    else:
+                        yield tuple(child_key)
+        else:
+            yield
+
+    
+
+
 
 
 class Credentials:
