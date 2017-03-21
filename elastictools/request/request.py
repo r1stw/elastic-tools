@@ -28,14 +28,14 @@ def agg(body):
         getters = {getter: body["getter_updater"](body["aggs"][aggr]["getters"][getter], aggr) for aggr in body["aggs"] for getter in body["aggs"][aggr]["getters"] if getter != "self"}
     getters.update(body["getters"])
     axis = None
-    if "axis" in body:
+    if "axis_maker" in body:
         child_axis = lambda x: {}
         if "aggs" in body:
             for child in body["aggs"]:
                 if "axis" in body["aggs"][child]:
                     child_axis = body["aggs"][child]["axis"]
                     break
-        axis = body["axis"](child_axis)
+        axis = body["axis_maker"](child_axis, child)
 
     body = {**body["body"], **({"aggs": aggs_bodys} if len(aggs_bodys) > 0 else {})}
     return {"body": body, "getters": getters, **({"axis": axis} if axis is not None else {})}
@@ -175,9 +175,13 @@ def agg_filter(flt, getter_name=None, **kwargs):
             return getter(response_body[key])
         return deeper_getter
 
+    def axis_maker(child_axis, key):
+        def axis(response_body):
+            return child_axis(response_body[key])
+
     body = {"filter": flt}
 
-    return {"body": body, "getters": getters, "getter_updater": getter_updater, "aggs": kwargs}
+    return {"body": body, "getters": getters, "getter_updater": getter_updater, "aggs": kwargs, "axis_maker": axis_maker}
 
 
 @bucket_agg
@@ -205,7 +209,7 @@ def agg_terms(field, script=False, size=10000, min_doc_count=None, order=None, g
         def deeper_getter(response_body, *args, **kwargs2):
             return [getter(bucket[key], *args, **kwargs2) for bucket in getter(response_body["buckets"])]
         def deeper_getter2(response_body, bucket_id, *args, **kwargs2):
-            return getter(response_body["buckets"][bucket_id], *args, **kwargs2)
+            return getter(response_body["buckets"][bucket_id][key], *args, **kwargs2)
 
         if is_axis:
             return deeper_getter
@@ -218,11 +222,11 @@ def agg_terms(field, script=False, size=10000, min_doc_count=None, order=None, g
         **({"order": order} if order is not None else {})}
     }
     if is_axis:
-        def axis_maker(child_axis):
+        def axis_maker(child_axis, key):
             def axis(response_body):
-                return {i: child_axis(response_body["buckets"][i]) for i in range(len(response_body["buckets"]))}
+                return {i: child_axis(response_body["buckets"][i][key]) for i in range(len(response_body["buckets"]))}
 
-        return {"body": body, "getters": getters, "getter_updater": getter_updater, "aggs": kwargs, "axis": axis_maker}
+        return {"body": body, "getters": getters, "getter_updater": getter_updater, "aggs": kwargs, "axis_maker": axis_maker}
     else:
         return {"body": body, "getters": getters, "getter_updater": getter_updater, "aggs": kwargs}
 
@@ -254,7 +258,7 @@ def agg_histogram(field, interval, getter_doc_count=None, getter_key=None, gette
             return [getter(bucket[key], *args, **kwargs2) for bucket in getter(response_body["buckets"])]
 
         def deeper_getter2(response_body, bucket_id, *args, **kwargs2):
-            return getter(response_body["buckets"][bucket_id], *args, **kwargs2)
+            return getter(response_body["buckets"][bucket_id][key], *args, **kwargs2)
 
         if is_axis:
             return deeper_getter
@@ -264,11 +268,11 @@ def agg_histogram(field, interval, getter_doc_count=None, getter_key=None, gette
     body = {"date_histogram" if date_histogram else "histogram": {"field": field, "interval": interval}}
 
     if is_axis:
-        def axis_maker(child_axis):
+        def axis_maker(child_axis, key):
             def axis(response_body):
-                return {i: child_axis(response_body["buckets"][i]) for i in range(len(response_body["buckets"]))}
+                return {i: child_axis(response_body["buckets"][i][key]) for i in range(len(response_body["buckets"]))}
 
-        return {"body": body, "getters": getters, "getter_updater": getter_updater, "aggs": kwargs, "axis": axis_maker}
+        return {"body": body, "getters": getters, "getter_updater": getter_updater, "aggs": kwargs, "axis_maker": axis_maker}
     else:
         return {"body": body, "getters": getters, "getter_updater": getter_updater, "aggs": kwargs}
 
