@@ -32,11 +32,11 @@ def agg(body):
         child_axis = lambda x: {}
         child = None
         if "aggs" in body:
-            for child in body["aggs"]:
-                if "axis" in body["aggs"][child]:
-                    child_axis = body["aggs"][child]["axis"]
+            for child_ in body["aggs"]:
+                if "axis" in body["aggs"][child_]:
+                    child_axis = body["aggs"][child_]["axis"]
+                    child = child_
                     break
-            child = None
         axis = body["axis_maker"](child_axis, child)
 
     body = {**body["body"], **({"aggs": aggs_bodys} if len(aggs_bodys) > 0 else {})}
