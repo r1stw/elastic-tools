@@ -33,7 +33,6 @@ class Response:
             self.getters_dict[getter] = getter_factory(getter)
             setattr(self.getters, getter, self.getters_dict[getter])
         self.response_body = None
-        self.keys_iter()
 
     def keys_iter(self):
         self.axis_table = []

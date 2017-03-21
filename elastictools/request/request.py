@@ -51,7 +51,7 @@ def bucket_agg(func):
 
 def plain_multi_bucket_getter_updater(getter, key):
     def deeper_getter(response_body, *args, **kwargs):
-        return [getter(bucket[key], *args, **kwargs) for bucket in getter(response_body["buckets"])]
+        return [getter(bucket[key], *args, **kwargs) for bucket in response_body["buckets"]]
     return deeper_getter
 
 
@@ -75,15 +75,22 @@ def multi_bucket_axis_maker(child_axis, key):
 
 
 def single_bucket_getter_updater(getter, key):
-    def deeper_getter(response_body):
-        return getter(response_body[key])
+    def deeper_getter(response_body, *args, **kwargs):
+        return getter(response_body[key], *args, **kwargs)
     return deeper_getter
 
 
 def single_bucket_axis_maker(child_axis, key):
     def axis(response_body):
         return child_axis(response_body[key])
-    return axis
+
+    def axis2(response_body):
+        return {}
+
+    if key is None:
+        return axis2
+    else:
+        return axis
 
 
 def request(query=None, fieldlist=None, sorting=None, **aggs):
@@ -128,8 +135,8 @@ def request(query=None, fieldlist=None, sorting=None, **aggs):
     }
 
     def getter_updater(p_getter, key):
-        def deeper_getter(response_body):
-            return p_getter(response_body["aggregations"][key])
+        def deeper_getter(response_body, *args, **kwargs):
+            return p_getter(response_body["aggregations"][key], *args, **kwargs)
         return deeper_getter
     getters = {key: getter_updater(aggs[aggr]["getters"][key], aggr) for aggr in aggs for key in aggs[aggr]["getters"]}
     axis = lambda x: {}
@@ -221,19 +228,20 @@ def agg_terms(field, script=False, size=10000, min_doc_count=None, order=None, g
     add_getter(getters, getter_key, "key")
 
     def getter_factory(key, bucket_id=None):
-        def result(response_body, *args, **kwargs2):
+        def result_plain(response_body, *args, **kwargs2):
             return [getters[key](bucket) for bucket in response_body["buckets"]]
 
-        def result2(response_body, bucket_id, *args, **kwargs2):
+        def result_axis(response_body, bucket_id, *args, **kwargs2):
             return getters[key](response_body["buckets"][bucket_id])
 
         if is_axis:
-            return result
+            return result_axis
         else:
-            return result2
+            return result_plain
 
+    getters_new={}
     for getter in getters:
-        getters[getter] = getter_factory(getter)
+        getters_new[getter] = getter_factory(getter)
 
     if is_axis:
         getter_updater = axis_multi_bucket_getter_updater
@@ -246,9 +254,9 @@ def agg_terms(field, script=False, size=10000, min_doc_count=None, order=None, g
         **({"order": order} if order is not None else {})}
     }
     if is_axis:
-        return {"body": body, "getters": getters, "getter_updater": getter_updater, "aggs": kwargs, "axis_maker": multi_bucket_axis_maker}
+        return {"body": body, "getters": getters_new, "getter_updater": getter_updater, "aggs": kwargs, "axis_maker": multi_bucket_axis_maker}
     else:
-        return {"body": body, "getters": getters, "getter_updater": getter_updater, "aggs": kwargs}
+        return {"body": body, "getters": getters_new, "getter_updater": getter_updater, "aggs": kwargs}
 
 
 @bucket_agg
@@ -259,19 +267,20 @@ def agg_histogram(field, interval, getter_doc_count=None, getter_key=None, gette
     add_getter(getters, getter_key_as_string, "key_as_string")
 
     def getter_factory(key):
-        def result(response_body, *args, **kwargs2):
+        def result_plain(response_body, *args, **kwargs2):
             return [getters[key](bucket) for bucket in response_body["buckets"]]
 
-        def result2(response_body, bucket_id, *args, **kwargs2):
+        def result_axis(response_body, bucket_id, *args, **kwargs2):
             return getters[key](response_body["buckets"][bucket_id])
 
         if is_axis:
-            return result
+            return result_axis
         else:
-            return result2
+            return result_plain
 
+    getters_new = {}
     for getter in getters:
-        getters[getter] = getter_factory(getter)
+        getters_new[getter] = getter_factory(getter)
 
     if is_axis:
         getter_updater = axis_multi_bucket_getter_updater
@@ -281,9 +290,9 @@ def agg_histogram(field, interval, getter_doc_count=None, getter_key=None, gette
     body = {"date_histogram" if date_histogram else "histogram": {"field": field, "interval": interval}}
 
     if is_axis:
-        return {"body": body, "getters": getters, "getter_updater": getter_updater, "aggs": kwargs, "axis_maker": multi_bucket_axis_maker}
+        return {"body": body, "getters": getters_new, "getter_updater": getter_updater, "aggs": kwargs, "axis_maker": multi_bucket_axis_maker}
     else:
-        return {"body": body, "getters": getters, "getter_updater": getter_updater, "aggs": kwargs}
+        return {"body": body, "getters": getters_new, "getter_updater": getter_updater, "aggs": kwargs}
 
 
 ##############################################################################################
