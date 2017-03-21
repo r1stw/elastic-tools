@@ -30,6 +30,7 @@ def agg(body):
     axis = None
     if "axis_maker" in body:
         child_axis = lambda x: {}
+        child = None
         if "aggs" in body:
             for child in body["aggs"]:
                 if "axis" in body["aggs"][child]:
