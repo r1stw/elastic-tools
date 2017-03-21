@@ -3,11 +3,11 @@ def add_getter(getters, getter_name, field_name, additional_level=None):
         return
     getter = None
     if additional_level is None:
-        def getter_(response_body):
+        def getter_(response_body, *args, **kwargs):
             return response_body[field_name]
         getter = getter_
     else:
-        def getter_(response_body):
+        def getter_(response_body, *args, **kwargs):
             return response_body[additional_level][field_name]
         getter = getter_
         pass
