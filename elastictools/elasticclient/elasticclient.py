@@ -11,7 +11,8 @@ class AuthType(Enum):
     BY_HOST = "byHost"
 
 
-
+class NotExecutedException(Exception):
+    pass
 
 
 class Response:
@@ -27,14 +28,17 @@ class Response:
         self.request_body = self.request["body"]
         self.getters_dict = {}
         self.getters = Getters()
-        self.getter = None
 
         for getter in request["getters"]:
             self.getters_dict[getter] = getter_factory(getter)
             setattr(self.getters, getter, self.getters_dict[getter])
         self.response_body = None
+        self.executed = False
+        self.axis_table = []
 
     def keys_iter(self):
+        if not self.executed:
+            raise NotExecutedException
         self.axis_table = []
         self.__fill_axis_table(self.request["axis"](self.response_body), ())
 
@@ -58,13 +62,18 @@ class Response:
             self.axis_table.append(tuple_draft)
 
     def line_iterator(self):
+        if not self.executed:
+            raise NotExecutedException
         for addr in self.axis_table:
             yield {getter: value(*addr) for getter, value in self.getters_dict.items()}
 
-
-
-
-
+    def execute(self, connection_name="default", **kwargs):
+        connection = connections[connection_name]
+        if connection.connection is None:
+            connection.get_connection()
+        kwargs["body"] = self.request_body
+        self.response_body = connection.connection.search(**kwargs)
+        self.executed = True
 
 
 class Credentials:
