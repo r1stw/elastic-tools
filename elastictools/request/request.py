@@ -25,7 +25,9 @@ def agg(body):
     aggs_bodys = {}
     if "aggs" in body:
         aggs_bodys = {key: body["aggs"][key]["body"] for key in body["aggs"]}
-        getters = {getter: body["getter_updater"](body["aggs"][aggr]["getters"][getter], aggr) for aggr in body["aggs"] for getter in body["aggs"][aggr]["getters"] if getter != "self"}
+        for aggr in body["aggs"]:
+            for getter in body["aggs"][aggr]["getters"]:
+                getters.update(body["getter_updater"](body["aggs"][aggr]["getters"][getter], aggr))
     getters.update(body["getters"])
     axis = None
     if "axis_maker" in body:
@@ -49,16 +51,34 @@ def bucket_agg(func):
     return decorated_agg
 
 
-def plain_multi_bucket_getter_updater(getter, key):
+def plain_multi_bucket_getter_updater(getter, key, getter_name):
     def deeper_getter(response_body, *args, **kwargs):
         return [getter(bucket[key], *args, **kwargs) for bucket in response_body["buckets"]]
-    return deeper_getter
+    return {getter_name: deeper_getter}
 
 
-def axis_multi_bucket_getter_updater(getter, key):
+def axis_multi_bucket_getter_updater(getter, key, getter_name):
     def deeper_getter(response_body, bucket_id, *args, **kwargs):
         return getter(response_body["buckets"][bucket_id][key], *args, **kwargs)
-    return deeper_getter
+    return {getter_name: deeper_getter}
+
+
+def split_multi_bucket_getter_updater_factory(bucket_keys):
+    def split_multi_bucket_getter_updater(getter, key, getter_name):
+        def inner_fucktory(bucket_key):
+            def deeper_getter(response_body, *args, **kwargs):
+                b_id = None
+                for index, bucket in enumerate(response_body["buckets"]):
+                    if bucket["key"] == bucket_key:
+                        b_id = index
+                        pass
+                    pass
+                if b_id is None:
+                    return None
+                return getter(response_body["buckets"][b_id][key], *args, **kwargs)
+            return deeper_getter
+        return {getter_name + "_" + bucket_key: inner_fucktory(bucket_key) for bucket_key in bucket_keys}
+    return split_multi_bucket_getter_updater
 
 
 def multi_bucket_axis_maker(child_axis, key):
@@ -234,16 +254,34 @@ def agg_terms(field, script=False, size=10000, min_doc_count=None, order=None, g
         def result_axis(response_body, bucket_id, *args, **kwargs2):
             return getters[key](response_body["buckets"][bucket_id])
 
-        if is_axis:
-            return result_axis
+        def split_factory(bucket_key):
+            def result_split(response_body, *args, **kwargs2):
+                b_id = None
+                for index, bucket in enumerate(response_body["buckets"]):
+                    if bucket["key"] == bucket_key:
+                        b_id = index
+                        pass
+                    pass
+                if b_id is None:
+                    return None
+                return getters[key](response_body["buckets"][b_id])
+            return result_split
+
+        if isinstance(is_axis, list):
+            return {key + "_" + key2: split_factory(key2) for key2 in is_axis}
+            pass
+        elif is_axis:
+            return {key: result_axis}
         else:
-            return result_plain
+            return {key: result_plain}
 
     getters_new={}
     for getter in getters:
         getters_new[getter] = getter_factory(getter)
 
-    if is_axis:
+    if isinstance(is_axis, list):
+        getter_updater = split_multi_bucket_getter_updater_factory
+    elif is_axis:
         getter_updater = axis_multi_bucket_getter_updater
     else:
         getter_updater = plain_multi_bucket_getter_updater
