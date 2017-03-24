@@ -280,7 +280,7 @@ def agg_terms(field, script=False, size=10000, min_doc_count=None, order=None, g
         getters_new[getter] = getter_factory(getter)
 
     if isinstance(is_axis, list):
-        getter_updater = split_multi_bucket_getter_updater_factory
+        getter_updater = split_multi_bucket_getter_updater_factory(is_axis)
     elif is_axis:
         getter_updater = axis_multi_bucket_getter_updater
     else:
