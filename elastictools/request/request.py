@@ -291,7 +291,7 @@ def agg_terms(field, script=False, size=10000, min_doc_count=None, order=None, g
         **({"min_doc_count": min_doc_count} if min_doc_count is not None else {}),
         **({"order": order} if order is not None else {})}
     }
-    if is_axis:
+    if is_axis and not isinstance(is_axis, list):
         return {"body": body, "getters": getters_new, "getter_updater": getter_updater, "aggs": kwargs, "axis_maker": multi_bucket_axis_maker}
     else:
         return {"body": body, "getters": getters_new, "getter_updater": getter_updater, "aggs": kwargs}
