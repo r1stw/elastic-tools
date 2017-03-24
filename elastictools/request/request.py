@@ -27,7 +27,7 @@ def agg(body):
         aggs_bodys = {key: body["aggs"][key]["body"] for key in body["aggs"]}
         for aggr in body["aggs"]:
             for getter in body["aggs"][aggr]["getters"]:
-                getters.update(body["getter_updater"](body["aggs"][aggr]["getters"][getter], aggr))
+                getters.update(body["getter_updater"](body["aggs"][aggr]["getters"][getter], aggr, getter))
     getters.update(body["getters"])
     axis = None
     if "axis_maker" in body:
@@ -94,10 +94,10 @@ def multi_bucket_axis_maker(child_axis, key):
         return axis
 
 
-def single_bucket_getter_updater(getter, key):
+def single_bucket_getter_updater(getter, key, getter_name):
     def deeper_getter(response_body, *args, **kwargs):
         return getter(response_body[key], *args, **kwargs)
-    return deeper_getter
+    return {getter_name: deeper_getter}
 
 
 def single_bucket_axis_maker(child_axis, key):
