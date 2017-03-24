@@ -15,8 +15,8 @@ class NotExecutedException(Exception):
     pass
 
 
-class Response:
-    def __init__(self, request):
+class Request:
+    def __init__(self, **es_search_args):
         class Getters(object): pass
 
         def getter_factory(key):
@@ -24,12 +24,15 @@ class Response:
                 return self.request["getters"][key](self.response_body, *args, **kwargs)
             return result
 
-        self.request = copy.deepcopy(request)
+        self.request = copy.deepcopy(es_search_args["body"])
         self.request_body = self.request["body"]
+        self.es_search_args = copy.deepcopy(es_search_args)
+        self.es_search_args["body"] = self.request_body
+
         self.getters_dict = {}
         self.getters = Getters()
 
-        for getter in request["getters"]:
+        for getter in self.request["getters"]:
             self.getters_dict[getter] = getter_factory(getter)
             setattr(self.getters, getter, self.getters_dict[getter])
         self.response_body = None
@@ -68,10 +71,11 @@ class Response:
             yield {getter: value(*addr) for getter, value in self.getters_dict.items()}
 
     def execute(self, connection_name="default", **kwargs):
+        if len(kwargs) == 0:
+            kwargs = self.es_search_args
         connection = connections[connection_name]
         if connection.connection is None:
             connection.get_connection()
-        kwargs["body"] = self.request_body
         self.response_body = connection.connection.search(**kwargs)
         self.executed = True
 
@@ -120,7 +124,7 @@ def search(connection_name="default", **kwargs):
     connection = connections[connection_name]
     if connection.connection is None:
         connection.get_connection()
-    result = Response(kwargs["body"])
+    result = Request(kwargs["body"])
     if kwargs["body"] is not None:
         kwargs["body"] = kwargs["body"]["body"]
     result.response_body = connection.connection.search(**kwargs)
