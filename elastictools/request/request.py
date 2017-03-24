@@ -77,7 +77,7 @@ def split_multi_bucket_getter_updater_factory(bucket_keys):
                     return None
                 return getter(response_body["buckets"][b_id][key], *args, **kwargs)
             return deeper_getter
-        return {getter_name + "_" + bucket_key: inner_fucktory(bucket_key) for bucket_key in bucket_keys}
+        return {getter_name + "_" + str(bucket_key): inner_fucktory(bucket_key) for bucket_key in bucket_keys}
     return split_multi_bucket_getter_updater
 
 
@@ -268,7 +268,7 @@ def agg_terms(field, script=False, size=10000, min_doc_count=None, order=None, g
             return result_split
 
         if isinstance(is_axis, list):
-            return {key + "_" + key2: split_factory(key2) for key2 in is_axis}
+            return {key + "_" + str(key2): split_factory(key2) for key2 in is_axis}
             pass
         elif is_axis:
             return {key: result_axis}
