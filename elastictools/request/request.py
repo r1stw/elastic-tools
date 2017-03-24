@@ -327,7 +327,7 @@ def agg_histogram(field, interval, getter_doc_count=None, getter_key=None, gette
 
     body = {"date_histogram" if date_histogram else "histogram": {"field": field, "interval": interval}}
 
-    if is_axis:
+    if is_axis and not isinstance(is_axis, list):
         return {"body": body, "getters": getters_new, "getter_updater": getter_updater, "aggs": kwargs, "axis_maker": multi_bucket_axis_maker}
     else:
         return {"body": body, "getters": getters_new, "getter_updater": getter_updater, "aggs": kwargs}
