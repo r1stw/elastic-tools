@@ -77,8 +77,8 @@ class Request:
         if connection.connection is None:
             connection.get_connection()
         self.response_body = connection.connection.search(**kwargs)
-        self.keys_iter()
         self.executed = True
+        self.keys_iter()
 
 
 class Credentials:
