@@ -399,8 +399,8 @@ def agg_top_hits(size, sorting=None, fields=None, **kwargs):
 
 
 @simple_value_agg
-def agg_cardinality(field, **kwargs):
-    return {"cardinality": {"field": field}}
+def agg_cardinality(field, precision_threshold=40000, **kwargs):
+    return {"cardinality": {"field": field, "precision_threshold": precision_threshold}}
 
 
 @simple_value_agg
