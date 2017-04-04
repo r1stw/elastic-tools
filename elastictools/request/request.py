@@ -277,7 +277,7 @@ def agg_terms(field, script=False, size=10000, min_doc_count=None, order=None, g
 
     getters_new={}
     for getter in getters:
-        getters_new[getter] = getter_factory(getter)
+        getters_new = {**getters_new, **getter_factory(getter)}
 
     if isinstance(is_axis, list):
         getter_updater = split_multi_bucket_getter_updater_factory(is_axis)
@@ -303,6 +303,8 @@ def agg_histogram(field, interval, getter_doc_count=None, getter_key=None, gette
     add_getter(getters, getter_doc_count, "doc_count")
     add_getter(getters, getter_key, "key")
     add_getter(getters, getter_key_as_string, "key_as_string")
+    if not date_histogram and getter_key_as_string is not None:
+        raise ValueError("getter_key_as_string cannot be specified in usual histogram")
 
     def getter_factory(key):
         def result_plain(response_body, *args, **kwargs2):
@@ -311,16 +313,34 @@ def agg_histogram(field, interval, getter_doc_count=None, getter_key=None, gette
         def result_axis(response_body, bucket_id, *args, **kwargs2):
             return getters[key](response_body["buckets"][bucket_id])
 
-        if is_axis:
-            return result_axis
+        def split_factory(bucket_key):
+            def result_split(response_body, *args, **kwargs2):
+                b_id = None
+                for index, bucket in enumerate(response_body["buckets"]):
+                    if bucket["key"] == bucket_key:
+                        b_id = index
+                        pass
+                    pass
+                if b_id is None:
+                    return None
+                return getters[key](response_body["buckets"][b_id])
+            return result_split
+
+        if isinstance(is_axis, list):
+            return {key + "_" + str(key2): split_factory(key2) for key2 in is_axis}
+            pass
+        elif is_axis:
+            return {key: result_axis}
         else:
-            return result_plain
+            return {key: result_plain}
 
     getters_new = {}
     for getter in getters:
-        getters_new[getter] = getter_factory(getter)
+        getters_new = {**getters_new, **getter_factory(getter)}
 
-    if is_axis:
+    if isinstance(is_axis, list):
+        getter_updater = split_multi_bucket_getter_updater_factory(is_axis)
+    elif is_axis:
         getter_updater = axis_multi_bucket_getter_updater
     else:
         getter_updater = plain_multi_bucket_getter_updater
