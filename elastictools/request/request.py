@@ -234,7 +234,7 @@ def flt_range(field, left=None, right=None, left_is_strict=False, right_is_stric
 @bucket_agg
 def agg_filter(flt, getter_name=None, **kwargs):
     getters = {}
-    add_getter(getters, getter_name, "value")
+    add_getter(getters, getter_name, "doc_count")
 
     body = {"filter": flt}
 
