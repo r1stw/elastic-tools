@@ -4,11 +4,17 @@ Elastic tools
 Working with elasticsearch python library? Tired of creating queries as huge and totally unreadable plain json objects? Want to create
 requests and interpret result intuitively? We may have a solution **just for you.**
 
+Featuring:
+  * Simplified request writing
+  * Awesome getter functions
+  * Axis and axis iterator
+  * Easier connections handilng
+  
 What can it do? Let's see:
 
 Basics
 ========================
-Say you got a nice request in json form:
+What would you have to write if you use elasticsearch:
 
 
     x = {
@@ -30,11 +36,15 @@ Say you got a nice request in json form:
 			  'aggs': {
 				  'sort_by_keys': {
 					  'terms': {
-						  'field': 'field3',
-						  'size': 10000,
-						  'order': {
-							  '_count': 'desc'
+						  'field': 'field3'
+					  },
+					  'aggs': {
+					  	  'unique_field4_values': {
+						  	'cardinality': {
+								'field': 'field4'
+							}
 						  }
+					  
 					  }
 				  }
 			  }
@@ -42,35 +52,45 @@ Say you got a nice request in json form:
 	  }
     }
   
-  Actually, it's not that nice and easy to read and edit, isn't it? What if we try to write this one using elastic-tools?
+  Same request written using elastic-tools:
   
 
   
       import elastictools.request as req 
       
-      x = req.request({}, filtered=req.agg(
-        req.agg_filter(
-          req.flt_and(
-            req.flt_eq("field1", "value1"),
-            req.flt_eq("field2", ["value2", "value3", "value4"])
-         )
-       ),
-       sort_by_keys=req.agg_terms("field3")
-       ))
+      x = req.request(filtered=req.agg_filter(
+            req.flt_and(
+              req.flt_eq("field1", "value1"),
+              req.flt_eq("field2", ["value2", "value3", "value4"])
+           ),
+           sort_by_keys=req.agg_terms("field3",
+	                              unique_field4_values=req.agg_cardinality("field4")
+	   )
+         ))
        
 Looks way better, doesn't it?
 
+Getters
+=======
+Say you have executed your request and now you want to know the value of "unique_field4_values" aggregation in first bucket. What you
+would have to do in elasticsearch:
 
-What are you waiting for, just install it already:
+	x = response['aggregations']['filtered']['sort_by_keys']['buckets'][0]['unique_field4_values']['value']
+
+
+Installation
+============
+
+Pretty much what you would expect:
      
-     pip install git+https://github.com/pleskanovsky/elastic-tools
+     pip install git+https://github.com/skyhound/elastic-tools
      
 
 
 Contacts
 ========
 
-Feel free to join this [Discord server](https://discord.gg/sJvDuuj) for support.
+Feel free to join this [Discord server](https://discord.gg/sJvDuuj) for support and suggestions.
 
 
 
