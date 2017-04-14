@@ -15,6 +15,10 @@ class NotExecutedException(Exception):
     pass
 
 
+class InvalidResponseException(Exception):
+    pass
+
+
 class Request:
     def __init__(self, **es_search_args):
         class Getters(object): pass
@@ -77,6 +81,8 @@ class Request:
         if connection.connection is None:
             connection.get_connection()
         self.response_body = connection.connection.search(**kwargs)
+        if self.response_body["_shards"]["successful"] == 0:
+            raise InvalidResponseException("No shards executes successfully: something wrong with elastcisearch?")
         self.executed = True
         self.keys_iter()
 
