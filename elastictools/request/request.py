@@ -194,7 +194,7 @@ def flt_and(*args):
     }
 
 
-def flt_exc(*args):
+def flt_not(*args):
     return {
         "bool": {
             "must_not": args
