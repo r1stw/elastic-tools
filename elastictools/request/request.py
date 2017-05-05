@@ -232,9 +232,9 @@ def flt_range(field, left=None, right=None, left_is_strict=False, right_is_stric
 
 
 @bucket_agg
-def agg_filter(flt, getter_name=None, **kwargs):
+def agg_filter(flt, getter=None, **kwargs):
     getters = {}
-    add_getter(getters, getter_name, "doc_count")
+    add_getter(getters, getter, "doc_count")
 
     body = {"filter": flt}
 
@@ -421,6 +421,11 @@ def agg_min(field, script=False, **kwargs):
 @simple_value_agg
 def agg_max(field, script=False, **kwargs):
     return {"max": {("script" if script else "field"): field}}
+
+
+@simple_value_agg
+def agg_value_count(field, script=False, **kwargs):
+    return {"value_count": {("script" if script else "field"): field}}
 
 
 def agg_extended_stats(field, script=False, sigma=3,
