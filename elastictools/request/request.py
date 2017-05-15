@@ -59,6 +59,8 @@ def plain_multi_bucket_getter_updater(getter, key, getter_name):
 
 def axis_multi_bucket_getter_updater(getter, key, getter_name):
     def deeper_getter(response_body, bucket_id, *args, **kwargs):
+        if len(response_body["buckets"]) == 0:
+            return None
         return getter(response_body["buckets"][bucket_id][key], *args, **kwargs)
     return {getter_name: deeper_getter}
 
@@ -83,7 +85,10 @@ def split_multi_bucket_getter_updater_factory(bucket_keys):
 
 def multi_bucket_axis_maker(child_axis, key):
     def axis(response_body):
-        return {i: child_axis(response_body["buckets"][i][key]) for i in range(len(response_body["buckets"]))}
+        x = {i: child_axis(response_body["buckets"][i][key]) for i in range(len(response_body["buckets"]))}
+        if len(x) == 0:
+            return {0: None}
+        return x
 
     def axis2(response_body):
         return {i: {} for i in range(len(response_body["buckets"]))}
