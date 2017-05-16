@@ -87,10 +87,12 @@ def multi_bucket_axis_maker(child_axis, key):
     def axis(response_body):
         x = {i: child_axis(response_body["buckets"][i][key]) for i in range(len(response_body["buckets"]))}
         if len(x) == 0:
-            return {0: None}
+            return {0: {}}
         return x
 
     def axis2(response_body):
+        if len(response_body["buckets"]) == 0:
+            return {0: {}}
         return {i: {} for i in range(len(response_body["buckets"]))}
 
     if key is None:
