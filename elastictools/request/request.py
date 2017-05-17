@@ -37,6 +37,8 @@ def aggregation_linker(aggregation):
                 pass
             pass
         pass
+    else:
+        axis = None
 
     body = {**aggregation["body"], **({"aggs": sub_aggs_bodys} if len(sub_aggs_bodys) > 0 else {})}
     return {"body": body, "getters": getters, **({"axis": axis} if axis is not None else {})}
