@@ -281,6 +281,16 @@ def agg_filter(flt, getter=None, **kwargs):
 
 
 @bucket_agg
+def agg_nested(path, getter=None, **kwargs):
+    getters = {}
+    add_getter(getters, getter, "doc_count")
+
+    body = {"nested": {"path": path}}
+
+    return {"body": body, "getters": getters, "getter_updater": single_bucket_getter_updater, "sub_aggs": kwargs, "axis_maker": single_bucket_axis_maker}
+
+
+@bucket_agg
 def agg_terms(field, script=False, size=10000, min_doc_count=None, order=None, getter_doc_count=None, getter_key=None, is_axis=True, **kwargs):
     getters = {}
     add_getter(getters, getter_doc_count, "doc_count")
@@ -317,7 +327,7 @@ def agg_terms(field, script=False, size=10000, min_doc_count=None, order=None, g
         else:
             return {key: result_plain}
 
-    getters_new={}
+    getters_new = {}
     for getter in getters:
         getters_new = {**getters_new, **getter_factory(getter)}
 
