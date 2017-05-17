@@ -1,53 +1,50 @@
 def add_getter(getters, getter_name, field_name, additional_level=None):
     if getter_name is None:
         return
-    getter = None
+
     if additional_level is None:
-        def getter_(response_body, *args, **kwargs):
+        def getter(response_body, *args, **kwargs):
             return response_body[field_name]
-        getter = getter_
     else:
-        def getter_(response_body, *args, **kwargs):
+        def getter(response_body, *args, **kwargs):
             return response_body[additional_level][field_name]
-        getter = getter_
         pass
 
-    if getter_name is not None:
-        getters.update({
-            getter_name: getter
-        })
-        pass
+    getters.update({getter_name: getter})
     pass
 
 
-def agg(body):
-    getters = {}
-    aggs_bodys = {}
-    if "aggs" in body:
-        aggs_bodys = {key: body["aggs"][key]["body"] for key in body["aggs"]}
-        for aggr in body["aggs"]:
-            for getter in body["aggs"][aggr]["getters"]:
-                getters.update(body["getter_updater"](body["aggs"][aggr]["getters"][getter], aggr, getter))
-    getters.update(body["getters"])
-    axis = None
-    if "axis_maker" in body:
-        child_axis = lambda x: {}
-        child = None
-        if "aggs" in body:
-            for child_ in body["aggs"]:
-                if "axis" in body["aggs"][child_]:
-                    child_axis = body["aggs"][child_]["axis"]
-                    child = child_
-                    break
-        axis = body["axis_maker"](child_axis, child)
+def aggregation_linker(aggregation):
+    getters = aggregation["getters"]
+    sub_aggs_bodys = {}
 
-    body = {**body["body"], **({"aggs": aggs_bodys} if len(aggs_bodys) > 0 else {})}
+    if "sub_aggs" in aggregation:
+        sub_aggs_bodys = {key: aggregation["sub_aggs"][key]["body"] for key in aggregation["sub_aggs"]}
+        for aggr in aggregation["sub_aggs"].items():
+            for getter in aggr[1]["getters"].items():
+                getters.update(aggregation["getter_updater"](getter[1], aggr[0], getter[0]))
+                pass
+            pass
+        pass
+
+    if "axis_maker" in aggregation:
+        axis = aggregation["axis_maker"]()
+        if "sub_aggs" in aggregation:
+            for child in aggregation["sub_aggs"]:
+                if "axis" in aggregation["sub_aggs"][child]:
+                    axis = aggregation["axis_maker"](aggregation["sub_aggs"][child]["axis"], child)
+                    break
+                pass
+            pass
+        pass
+
+    body = {**aggregation["body"], **({"aggs": sub_aggs_bodys} if len(sub_aggs_bodys) > 0 else {})}
     return {"body": body, "getters": getters, **({"axis": axis} if axis is not None else {})}
 
 
 def bucket_agg(func):
     def decorated_agg(*args, **kwargs):
-        return agg(func(*args, **kwargs))
+        return aggregation_linker(func(*args, **kwargs))
     return decorated_agg
 
 
@@ -65,40 +62,38 @@ def axis_multi_bucket_getter_updater(getter, key, getter_name):
     return {getter_name: deeper_getter}
 
 
+def create_per_bucket_getter_updater(bucket_key):
+    def per_bucket_getter_updater(getter, key, getter_name):
+        def deeper_getter(response_body, *args, **kwargs):
+            for index, bucket in enumerate(response_body["buckets"]):
+                if bucket["key"] == bucket_key:
+                    b_id = index
+                    return getter(response_body["buckets"][b_id][key], *args, **kwargs)
+                pass
+            return None
+        return {getter_name + "_" + str(bucket_key): deeper_getter}
+    return per_bucket_getter_updater
+
+
 def split_multi_bucket_getter_updater_factory(bucket_keys):
     def split_multi_bucket_getter_updater(getter, key, getter_name):
-        def inner_fucktory(bucket_key):
-            def deeper_getter(response_body, *args, **kwargs):
-                b_id = None
-                for index, bucket in enumerate(response_body["buckets"]):
-                    if bucket["key"] == bucket_key:
-                        b_id = index
-                        pass
-                    pass
-                if b_id is None:
-                    return None
-                return getter(response_body["buckets"][b_id][key], *args, **kwargs)
-            return deeper_getter
-        return {getter_name + "_" + str(bucket_key): inner_fucktory(bucket_key) for bucket_key in bucket_keys}
+        ret = {}
+        for bucket_key in bucket_keys:
+            ret = {**ret, **create_per_bucket_getter_updater(bucket_key)}
+            pass
+        return ret
     return split_multi_bucket_getter_updater
 
 
-def multi_bucket_axis_maker(child_axis, key):
+def multi_bucket_axis_maker(next_axis, next_axis_name):
     def axis(response_body):
-        x = {i: child_axis(response_body["buckets"][i][key]) for i in range(len(response_body["buckets"]))}
-        if len(x) == 0:
-            return {0: {}}
-        return x
-
-    def axis2(response_body):
         if len(response_body["buckets"]) == 0:
             return {0: {}}
-        return {i: {} for i in range(len(response_body["buckets"]))}
+        if next_axis_name is None:
+            return {i: {} for i in range(len(response_body["buckets"]))}
+        return {i: next_axis(response_body["buckets"][i][next_axis_name]) for i in range(len(response_body["buckets"]))}
 
-    if key is None:
-        return axis2
-    else:
-        return axis
+    return axis
 
 
 def single_bucket_getter_updater(getter, key, getter_name):
@@ -107,17 +102,13 @@ def single_bucket_getter_updater(getter, key, getter_name):
     return {getter_name: deeper_getter}
 
 
-def single_bucket_axis_maker(child_axis, key):
+def single_bucket_axis_maker(next_axis, next_axis_name):
     def axis(response_body):
-        return child_axis(response_body[key])
+        if next_axis_name is None:
+            return {}
+        return next_axis(response_body[next_axis_name])
 
-    def axis2(response_body):
-        return {}
-
-    if key is None:
-        return axis2
-    else:
-        return axis
+    return axis
 
 
 def request(query=None, fieldlist=None, sorting=None, **aggs):
@@ -131,6 +122,7 @@ def request(query=None, fieldlist=None, sorting=None, **aggs):
     """
     if query is None:
         query = {}
+        pass
     aggs_bodys = {key: aggs[key]["body"] for key in aggs}
     body = {
         **(
@@ -167,9 +159,11 @@ def request(query=None, fieldlist=None, sorting=None, **aggs):
         return deeper_getter
     getters = {key: getter_updater(aggs[aggr]["getters"][key], aggr) for aggr in aggs for key in aggs[aggr]["getters"]}
     axis = lambda x: {}
-    for agg2 in aggs:
-        if "axis" in aggs[agg2]:
-            axis = getter_updater(aggs[agg2]["axis"], agg2)
+    for aggregation in aggs:
+        if "axis" in aggs[aggregation]:
+            axis = getter_updater(aggs[aggregation]["axis"], aggregation)
+            break
+        pass
     return {"body": body, "getters": getters, "axis": axis}
 
 
@@ -178,11 +172,11 @@ def request(query=None, fieldlist=None, sorting=None, **aggs):
 ##############################################################################################
 
 
-def query_filter(flt):
+def query_filter(*filters):
     return {
-        "filtered":
+        "bool":
         {
-            "filter": flt
+            "filter": filters
         }
     }
 
@@ -192,27 +186,27 @@ def query_filter(flt):
 ##############################################################################################
 
 
-def flt_and(*args):
+def flt_and(*filters):
     return {
         "bool":
         {
-            "must": args
+            "filter": filters
         }
     }
 
 
-def flt_not(*args):
+def flt_not(*filters):
     return {
         "bool": {
-            "must_not": args
+            "must_not": filters
         }
     }
 
 
-def flt_or(*args):
+def flt_or(*filters):
     return {
         "bool": {
-            "should": args
+            "should": filters
         }
     }
 
@@ -220,8 +214,10 @@ def flt_or(*args):
 def flt_eq(field, value):
     if isinstance(value, list):
         return {"terms": {field: value}}
-    elif isinstance(value, str) and value[-1] == '*':
+    elif isinstance(value, str) and value[-1] == '*' and value.count("*") == 1 and value.count("?") == 0:
         return {"prefix": {field: value[:-1]}}
+    elif isinstance(value, str) and value.count("*") + value.count("?") > 0:
+        return {"wildcard": {field: value}}
     return {"term": {field: value}}
 
 
@@ -231,6 +227,42 @@ def flt_exists(field):
 
 def flt_range(field, left=None, right=None, left_is_strict=False, right_is_strict=False):
     return {"range": {field: {**({"gt" + ("" if left_is_strict else "e"): left} if left is not None else {}), **({ "lt" + ("" if right_is_strict else "e"): right} if right is not None else {})}}}
+
+
+def flt_type(field, typename):
+    return {"type": {field: typename}}
+
+
+def flt_nested(path, *filters):
+    return {"nested": {"path": path, "query": {"bool": {"filter": filters}}}}
+
+
+def flt_has_child(doctype, min_children=0, max_children=10000, *filters):
+    return{
+        "type": doctype,
+        "query": {
+            "bool":
+            {
+                "filter": filters
+            },
+            "min_children": min_children,
+            "max_children": max_children,
+            "score_mode": "none"
+        },
+    }
+
+
+def flt_has_parent(doctype, *filters):
+    return{
+        "type": doctype,
+        "query": {
+            "bool":
+            {
+                "filter": filters
+            },
+            "score_mode": False
+        },
+    }
 
 
 ##############################################################################################
@@ -245,7 +277,7 @@ def agg_filter(flt, getter=None, **kwargs):
 
     body = {"filter": flt}
 
-    return {"body": body, "getters": getters, "getter_updater": single_bucket_getter_updater, "aggs": kwargs, "axis_maker": single_bucket_axis_maker}
+    return {"body": body, "getters": getters, "getter_updater": single_bucket_getter_updater, "sub_aggs": kwargs, "axis_maker": single_bucket_axis_maker}
 
 
 @bucket_agg
@@ -302,9 +334,9 @@ def agg_terms(field, script=False, size=10000, min_doc_count=None, order=None, g
         **({"order": order} if order is not None else {})}
     }
     if is_axis and not isinstance(is_axis, list):
-        return {"body": body, "getters": getters_new, "getter_updater": getter_updater, "aggs": kwargs, "axis_maker": multi_bucket_axis_maker}
+        return {"body": body, "getters": getters_new, "getter_updater": getter_updater, "sub_aggs": kwargs, "axis_maker": multi_bucket_axis_maker}
     else:
-        return {"body": body, "getters": getters_new, "getter_updater": getter_updater, "aggs": kwargs}
+        return {"body": body, "getters": getters_new, "getter_updater": getter_updater, "sub_aggs": kwargs}
 
 
 @bucket_agg
@@ -358,9 +390,9 @@ def agg_histogram(field, interval, getter_doc_count=None, getter_key=None, gette
     body = {"date_histogram" if date_histogram else "histogram": {"field": field, "interval": interval}}
 
     if is_axis and not isinstance(is_axis, list):
-        return {"body": body, "getters": getters_new, "getter_updater": getter_updater, "aggs": kwargs, "axis_maker": multi_bucket_axis_maker}
+        return {"body": body, "getters": getters_new, "getter_updater": getter_updater, "sub_aggs": kwargs, "axis_maker": multi_bucket_axis_maker}
     else:
-        return {"body": body, "getters": getters_new, "getter_updater": getter_updater, "aggs": kwargs}
+        return {"body": body, "getters": getters_new, "getter_updater": getter_updater, "sub_aggs": kwargs}
 
 
 ##############################################################################################
