@@ -85,7 +85,7 @@ def split_multi_bucket_getter_updater_factory(bucket_keys):
     return split_multi_bucket_getter_updater
 
 
-def multi_bucket_axis_maker(next_axis, next_axis_name):
+def multi_bucket_axis_maker(next_axis=None, next_axis_name=None):
     def axis(response_body):
         if len(response_body["buckets"]) == 0:
             return {0: {}}
@@ -102,7 +102,7 @@ def single_bucket_getter_updater(getter, key, getter_name):
     return {getter_name: deeper_getter}
 
 
-def single_bucket_axis_maker(next_axis, next_axis_name):
+def single_bucket_axis_maker(next_axis=None, next_axis_name=None):
     def axis(response_body):
         if next_axis_name is None:
             return {}
