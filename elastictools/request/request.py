@@ -259,7 +259,10 @@ def agg_terms(field, script=False, size=10000, min_doc_count=None, order=None, g
             return [getters[key](bucket) for bucket in response_body["buckets"]]
 
         def result_axis(response_body, bucket_id, *args, **kwargs2):
-            return getters[key](response_body["buckets"][bucket_id])
+            if len(response_body["buckets"]) > 0:
+                return getters[key](response_body["buckets"][bucket_id])
+            else:
+                return None
 
         def split_factory(bucket_key):
             def result_split(response_body, *args, **kwargs2):
