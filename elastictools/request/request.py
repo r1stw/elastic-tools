@@ -20,9 +20,9 @@ def aggregation_linker(aggregation):
 
     if "sub_aggs" in aggregation:
         sub_aggs_bodys = {key: aggregation["sub_aggs"][key]["body"] for key in aggregation["sub_aggs"]}
-        for aggr in aggregation["sub_aggs"].items():
-            for getter in aggr[1]["getters"].items():
-                getters.update(aggregation["getter_updater"](getter[1], aggr[0], getter[0]))
+        for aggr_key, aggr_value in aggregation["sub_aggs"].items():
+            for getter_key, getter_value in aggr_value["getters"].items():
+                getters.update(aggregation["getter_updater"](getter_value, aggr_key, getter_key))
                 pass
             pass
         pass
@@ -81,7 +81,7 @@ def split_multi_bucket_getter_updater_factory(bucket_keys):
     def split_multi_bucket_getter_updater(getter, key, getter_name):
         ret = {}
         for bucket_key in bucket_keys:
-            ret = {**ret, **create_per_bucket_getter_updater(bucket_key)}
+            ret = {**ret, **create_per_bucket_getter_updater(bucket_key)(getter, key, getter_name)}
             pass
         return ret
     return split_multi_bucket_getter_updater
