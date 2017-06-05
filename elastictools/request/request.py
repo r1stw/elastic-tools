@@ -31,7 +31,7 @@ def aggregation_linker(aggregation):
         axis = aggregation["axis_maker"]()
         if "sub_aggs" in aggregation:
             for child in aggregation["sub_aggs"]:
-                if "axis" in aggregation["sub_aggs"][child]:
+                if "axis" in aggregation["sub_aggs"][child] and aggregation["sub_aggs"][child]["axis"] is not None:
                     axis = aggregation["axis_maker"](aggregation["sub_aggs"][child]["axis"], child)
                     break
                 pass
@@ -105,12 +105,12 @@ def single_bucket_getter_updater(getter, key, getter_name):
 
 
 def single_bucket_axis_maker(next_axis=None, next_axis_name=None):
-    def axis(response_body):
-        if next_axis_name is None:
-            return {}
-        return next_axis(response_body[next_axis_name])
-
-    return axis
+    if next_axis_name is None:
+        return None
+    else:
+        def axis(response_body):
+            return next_axis(response_body[next_axis_name])
+        return axis
 
 
 def request(query=None, fieldlist=None, sorting=None, **aggs):
@@ -365,7 +365,10 @@ def agg_histogram(field, interval, getter_doc_count=None, getter_key=None, gette
             return [getters[key](bucket) for bucket in response_body["buckets"]]
 
         def result_axis(response_body, bucket_id, *args, **kwargs2):
-            return getters[key](response_body["buckets"][bucket_id])
+            if len(response_body["buckets"]) > 0:
+                return getters[key](response_body["buckets"][bucket_id])
+            else:
+                return None
 
         def split_factory(bucket_key):
             def result_split(response_body, *args, **kwargs2):
