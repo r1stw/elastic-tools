@@ -297,7 +297,7 @@ def agg_reverse_nested(getter=None, **kwargs):
     getters = {}
     add_getter(getters, getter, "doc_count")
 
-    body = {"nested": {}}
+    body = {"reverse_nested": {}}
 
     return {"body": body, "getters": getters, "getter_updater": single_bucket_getter_updater, "sub_aggs": kwargs,
             "axis_maker": single_bucket_axis_maker}
