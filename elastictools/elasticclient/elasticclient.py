@@ -21,7 +21,8 @@ class InvalidResponseException(Exception):
 
 class Request:
     def __init__(self, **es_search_args):
-        class Getters(object): pass
+        class Getters(object):
+            pass
 
         def getter_factory(key):
             def result(*args, **kwargs):
