@@ -517,3 +517,11 @@ def agg_extended_stats(field, script=False, sigma=3,
 
     return {"body": body, "getters": getters}
 
+
+def agg_percentile(field, percents=None, getter=None, **kwargs):
+    getters = {}
+    add_getter(getters, getter, "values")
+    body = {"percentiles": {"field": field, **({"percents": percents} if percents is not None else {})}}
+    return {"body": body, "getters": getters}
+
+
