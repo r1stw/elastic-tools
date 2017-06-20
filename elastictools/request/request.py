@@ -496,6 +496,11 @@ def agg_value_count(field, script=False, **kwargs):
     return {"value_count": {("script" if script else "field"): field}}
 
 
+@simple_value_agg
+def agg_avg_bucket(buckets_path, **kwargs):
+    return {"avg_bucket": {"bucket_path": buckets_path}}
+
+
 def agg_extended_stats(field, script=False, sigma=3,
                        getter_count=None, getter_min=None, getter_max=None, getter_avg=None,
                        getter_sum=None, getter_sum_of_squares=None, getter_variance=None,
