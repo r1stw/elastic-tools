@@ -118,7 +118,7 @@ def request(query=None, fieldlist=None, sorting=None, **aggs):
     Creates core request body. \n
     :param query: Pure JSON query body. Empty by default. \n
     :param fieldlist: List of fields to write in "_source". Empty by default, which means that all source fields will be included in response hits \n
-    :param sorting: Sorting dict, {"filed1": "asc", "field2": "desc} for example \n
+    :param sorting: Sorting dict, {"field1": "asc", "field2": "desc} for example \n
     :param aggs: Aggregation objects provided by agg functions \n
     :return: {"body": %plain json request%, "getters": %dictionary of named getters%} \n
     """
@@ -427,7 +427,7 @@ def agg_histogram(field, interval, getter_doc_count=None, getter_key=None, gette
 
 
 def simple_value_agg(agg):
-    def decorated_agg (*args, getter=None, **kwargs):
+    def decorated_agg(*args, getter=None, **kwargs):
         getters = {}
         add_getter(getters, getter, "value")
 
@@ -528,5 +528,77 @@ def agg_percentile(field, percents=None, getter=None, **kwargs):
     add_getter(getters, getter, "values")
     body = {"percentiles": {"field": field, **({"percents": percents} if percents is not None else {})}}
     return {"body": body, "getters": getters}
+
+
+def agg_filters(filters, getter_key=None, getter_doc_count=None, is_axis=True, other_bucket_key=None, **kwargs):
+    if isinstance(filters, list):
+        return __agg_filters_anonymous(filters, getter_doc_count, other_bucket_key, is_axis, **kwargs)
+    else:
+        raise ValueError("Named filters are not supported yet")
+
+
+@bucket_agg
+def __agg_filters_anonymous(filters, getter_doc_count, other_bucket_key, is_axis, **kwargs):
+    getters = {}
+    add_getter(getters, getter_doc_count, "doc_count")
+
+    def getter_factory(key):
+        def result_plain(response_body, *args, **kwargs2):
+            return [getters[key](bucket) for bucket in response_body["buckets"]]
+
+        def result_axis(response_body, bucket_id, *args, **kwargs2):
+            if len(response_body["buckets"]) > 0:
+                return getters[key](response_body["buckets"][bucket_id])
+            else:
+                return None
+
+        def split_factory(bucket_key):
+            def result_split(response_body, *args, **kwargs2):
+                b_id = None
+                for index, bucket in enumerate(response_body["buckets"]):
+                    if bucket["key"] == bucket_key:
+                        b_id = index
+                        pass
+                    pass
+                if b_id is None:
+                    return None
+                return getters[key](response_body["buckets"][b_id])
+
+            return result_split
+
+        if isinstance(is_axis, list):
+            return {key + "_" + str(key2): split_factory(key2) for key2 in is_axis}
+            pass
+        elif is_axis:
+            return {key: result_axis}
+        else:
+            return {key: result_plain}
+
+    getters_new = {}
+    for getter in getters:
+        getters_new = {**getters_new, **getter_factory(getter)}
+
+    if isinstance(is_axis, list):
+        getter_updater = split_multi_bucket_getter_updater_factory(is_axis)
+    elif is_axis:
+        getter_updater = axis_multi_bucket_getter_updater
+    else:
+        getter_updater = plain_multi_bucket_getter_updater
+
+    body = {
+        "filters": {
+            "filters": filters,
+            **({} if other_bucket_key is None else {"other_bucket_key": other_bucket_key})
+        }
+    }
+
+    if is_axis and not isinstance(is_axis, list):
+        return {"body": body, "getters": getters_new, "getter_updater": getter_updater, "sub_aggs": kwargs,
+                "axis_maker": multi_bucket_axis_maker}
+    else:
+        return {"body": body, "getters": getters_new, "getter_updater": getter_updater, "sub_aggs": kwargs}
+
+
+
 
 
