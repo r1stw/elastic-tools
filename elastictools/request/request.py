@@ -72,12 +72,15 @@ def axis_multi_bucket_getter_updater(getter, key, getter_name):
 def create_per_bucket_getter_updater(bucket_key):
     def per_bucket_getter_updater(getter, key, getter_name):
         def deeper_getter(response_body, *args, **kwargs):
-            for index, bucket in enumerate(response_body["buckets"]):
-                if bucket["key"] == bucket_key:
-                    b_id = index
-                    return getter(response_body["buckets"][b_id][key], *args, **kwargs)
-                pass
-            return None
+            if isinstance(response_body["buckets"], dict):
+                return getter(response_body["buckets"][bucket_key][key], *args, **kwargs)
+            else:
+                for index, bucket in enumerate(response_body["buckets"]):
+                    if bucket["key"] == bucket_key:
+                        b_id = index
+                        return getter(response_body["buckets"][b_id][key], *args, **kwargs)
+                    pass
+                return None
         return {getter_name + "_" + str(bucket_key): deeper_getter}
     return per_bucket_getter_updater
 
@@ -625,15 +628,7 @@ def __agg_filters_named(filters, getter_key, getter_doc_count, other_bucket_key,
 
         def split_factory(bucket_key):
             def result_split(response_body, *args, **kwargs2):
-                b_id = None
-                for index, bucket in enumerate(response_body["buckets"]):
-                    if bucket["key"] == bucket_key:
-                        b_id = index
-                        pass
-                    pass
-                if b_id is None:
-                    return None
-                return getters[key](response_body["buckets"][b_id])
+                return getters[key](response_body["buckets"][bucket_key])
 
             return result_split
 
