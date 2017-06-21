@@ -52,7 +52,10 @@ def bucket_agg(func):
 
 def plain_multi_bucket_getter_updater(getter, key, getter_name):
     def deeper_getter(response_body, *args, **kwargs):
-        return [getter(bucket[key], *args, **kwargs) for bucket in response_body["buckets"]]
+        if isinstance(response_body["buckets"], list):
+            return [getter(bucket[key], *args, **kwargs) for bucket in response_body["buckets"]]
+        else:
+            return [getter(bucket[key], *args, **kwargs) for bucket in response_body["buckets"].values()]
     return {getter_name: deeper_getter}
 
 
@@ -60,6 +63,8 @@ def axis_multi_bucket_getter_updater(getter, key, getter_name):
     def deeper_getter(response_body, bucket_id, *args, **kwargs):
         if len(response_body["buckets"]) == 0:
             return None
+        if isinstance(response_body["buckets"], dict):
+            bucket_id = list(response_body["buckets"].keys())[bucket_id]
         return getter(response_body["buckets"][bucket_id][key], *args, **kwargs)
     return {getter_name: deeper_getter}
 
@@ -614,7 +619,7 @@ def __agg_filters_named(filters, getter_key, getter_doc_count, other_bucket_key,
 
         def result_axis(response_body, bucket_id, *args, **kwargs2):
             if len(response_body["buckets"]) > 0:
-                return getters[key](response_body["buckets"][bucket_id])
+                return getters[key](response_body["buckets"][list(response_body["buckets"].keys())[bucket_id]])
             else:
                 return None
 
