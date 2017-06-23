@@ -506,7 +506,59 @@ def agg_value_count(field, script=False, **kwargs):
 
 @simple_value_agg
 def agg_avg_bucket(buckets_path, **kwargs):
-    return {"avg_bucket": {"bucket_path": buckets_path}}
+    return {"avg_bucket": {"buckets_path": buckets_path}}
+
+
+@simple_value_agg
+def agg_derivative_bucket(buckets_path, **kwargs):
+    return {"derivative_bucket": {"buckets_path": buckets_path}}
+
+
+@simple_value_agg
+def agg_max_bucket(buckets_path, **kwargs):
+    return {"max_bucket": {"buckets_path": buckets_path}}
+
+
+@simple_value_agg
+def agg_min_bucket(buckets_path, **kwargs):
+    return {"min_bucket": {"buckets_path": buckets_path}}
+
+
+@simple_value_agg
+def agg_sum_bucket(buckets_path, **kwargs):
+    return {"sum_bucket": {"buckets_path": buckets_path}}
+
+
+@simple_value_agg
+def agg_stats_bucket(buckets_path, **kwargs):
+    return {"stats_bucket": {"buckets_path": buckets_path}}
+
+
+@simple_value_agg
+def agg_extended_stats_bucket(buckets_path, **kwargs):
+    return {"extended_stats_bucket": {"buckets_path": buckets_path}}
+
+
+@simple_value_agg
+def agg_cumulative_sum(buckets_path, **kwargs):
+    return {"cumulative_sum": {"buckets_path": buckets_path}}
+
+
+@simple_value_agg
+def agg_bucket_selector(buckets_path, script, **kwargs):
+    return {"bucket_selector": {"buckets_path": buckets_path, "script": script}}
+
+
+@simple_value_agg
+def agg_bucket_script(buckets_path, script, **kwargs):
+    return {"bucket_script": {"buckets_path": buckets_path, "script": script}}
+
+
+@simple_value_agg
+def agg_percentiles_bucket(buckets_path, percents=None, **kwargs):
+    if percents is None:
+        percents = [25.0, 50.0, 75.0]
+    return {"percentiles_bucket": {"buckets_path": buckets_path, "percents": percents}}
 
 
 def agg_extended_stats(field, script=False, sigma=3,
