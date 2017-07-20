@@ -692,9 +692,19 @@ def __agg_filters_named(filters, getter_key, getter_doc_count, other_bucket_key,
         else:
             return {key: result_plain}
 
+
+
     getters_new = {}
     for getter in getters:
         getters_new = {**getters_new, **getter_factory(getter)}
+    if getter_key is not None:
+        if isinstance(is_axis, list):
+            for key2 in is_axis:
+                getters_new[getter_key + "_" + str(key2)] = lambda *args, **kwargs2: key2
+        elif is_axis:
+            getters_new[getter_key] = lambda response_body, bucket_id, *args, **kwargs2: list(response_body["buckets"].keys())[bucket_id]
+        else:
+            getters_new[getter_key] = lambda response_body, *args, **kwargs2: list(response_body["buckets"].keys())
 
     if isinstance(is_axis, list):
         getter_updater = split_multi_bucket_getter_updater_factory(is_axis)
