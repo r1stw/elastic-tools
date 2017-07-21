@@ -106,6 +106,15 @@ def multi_bucket_axis_maker(next_axis=None, next_axis_name=None):
     return axis
 
 
+def percentile_axis_maker(next_axis=None, next_axis_name=None):
+    def axis(response_body):
+        if len(response_body["values"]) == 0:
+            return {0: {}}
+        return {i: {} for i in response_body["values"].keys()}
+
+    return axis
+
+
 def single_bucket_getter_updater(getter, key, getter_name):
     def deeper_getter(response_body, *args, **kwargs):
         return getter(response_body[key], *args, **kwargs)
@@ -595,7 +604,7 @@ def agg_percentile(field, percents=None, getter_key=None, getter_value=None, is_
             for key2 in is_axis:
                 getters[getter_key + "_" + str(key2)] = split_factory(key2)
         elif is_axis:
-            getters[getter_key] = lambda response_body, bucket_id, *args, **kwargs2: list(response_body["values"].keys())[bucket_id]
+            getters[getter_key] = lambda response_body, bucket_id, *args, **kwargs2: bucket_id
         else:
             getters[getter_key] = lambda response_body, *args, **kwargs2: list(response_body["values"].keys())
 
@@ -608,11 +617,14 @@ def agg_percentile(field, percents=None, getter_key=None, getter_value=None, is_
             for key2 in is_axis:
                 getters[getter_key + "_" + str(key2)] = split_factory(key2)
         elif is_axis:
-            getters[getter_value] = lambda response_body, bucket_id, *args, **kwargs2: list(response_body["values"].values())[bucket_id]
+            getters[getter_value] = lambda response_body, bucket_id, *args, **kwargs2: response_body["values"][bucket_id]
         else:
             getters[getter_value] = lambda response_body, *args, **kwargs2: list(response_body["values"].values())
     body = {"percentiles": {"field": field, **({"percents": percents} if percents is not None else {})}}
-    return {"body": body, "getters": getters}
+    if is_axis and not isinstance(is_axis, list):
+        return {"body": body, "getters": getters, "axis": percentile_axis_maker(None, None)}
+    else:
+        return {"body": body, "getters": getters}
 
 
 def agg_filters(filters, getter_key=None, getter_doc_count=None, is_axis=True, other_bucket_key=None, **kwargs):
