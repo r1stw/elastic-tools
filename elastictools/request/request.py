@@ -583,9 +583,34 @@ def agg_extended_stats(field, script=False, sigma=3,
     return {"body": body, "getters": getters}
 
 
-def agg_percentile(field, percents=None, getter=None, **kwargs):
+def agg_percentile(field, percents=None, getter_key=None, getter_value=None, is_axis=True, **kwargs):
     getters = {}
-    add_getter(getters, getter, "values")
+
+    if getter_key is not None:
+        if isinstance(is_axis, list):
+            def split_factory(bucket_key):
+                def result_split(response_body, *args, **kwargs2):
+                    return bucket_key
+                return result_split
+            for key2 in is_axis:
+                getters[getter_key + "_" + str(key2)] = split_factory(key2)
+        elif is_axis:
+            getters[getter_key] = lambda response_body, bucket_id, *args, **kwargs2: list(response_body["values"].keys())[bucket_id]
+        else:
+            getters[getter_key] = lambda response_body, *args, **kwargs2: list(response_body["values"].keys())
+
+    if getter_value is not None:
+        if isinstance(is_axis, list):
+            def split_factory(bucket_key):
+                def result_split(response_body, *args, **kwargs2):
+                    return response_body["values"][bucket_key]
+                return result_split
+            for key2 in is_axis:
+                getters[getter_key + "_" + str(key2)] = split_factory(key2)
+        elif is_axis:
+            getters[getter_value] = lambda response_body, bucket_id, *args, **kwargs2: list(response_body["values"].values())[bucket_id]
+        else:
+            getters[getter_value] = lambda response_body, *args, **kwargs2: list(response_body["values"].values())
     body = {"percentiles": {"field": field, **({"percents": percents} if percents is not None else {})}}
     return {"body": body, "getters": getters}
 
@@ -692,15 +717,17 @@ def __agg_filters_named(filters, getter_key, getter_doc_count, other_bucket_key,
         else:
             return {key: result_plain}
 
-
-
     getters_new = {}
     for getter in getters:
         getters_new = {**getters_new, **getter_factory(getter)}
     if getter_key is not None:
         if isinstance(is_axis, list):
+            def split_factory(bucket_key):
+                def result_split(response_body, *args, **kwargs2):
+                    return bucket_key
+                return result_split
             for key2 in is_axis:
-                getters_new[getter_key + "_" + str(key2)] = lambda *args, **kwargs2: key2
+                getters_new[getter_key + "_" + str(key2)] = split_factory(key2)
         elif is_axis:
             getters_new[getter_key] = lambda response_body, bucket_id, *args, **kwargs2: list(response_body["buckets"].keys())[bucket_id]
         else:
