@@ -563,11 +563,44 @@ def agg_bucket_script(buckets_path, script, **kwargs):
     return {"bucket_script": {"buckets_path": buckets_path, "script": script}}
 
 
-@simple_value_agg
-def agg_percentiles_bucket(buckets_path, percents=None, **kwargs):
-    if percents is None:
-        percents = [25.0, 50.0, 75.0]
-    return {"percentiles_bucket": {"buckets_path": buckets_path, "percents": percents}}
+def agg_percentiles_bucket(buckets_path, percents=None, getter_key=None, getter_value=None, is_axis=True, **kwargs):
+    getters = {}
+
+    if getter_key is not None:
+        if isinstance(is_axis, list):
+            def split_factory(bucket_key):
+                def result_split(response_body, *args, **kwargs2):
+                    return bucket_key
+
+                return result_split
+
+            for key2 in is_axis:
+                getters[getter_key + "_" + str(key2)] = split_factory(key2)
+        elif is_axis:
+            getters[getter_key] = lambda response_body, bucket_id, *args, **kwargs2: bucket_id
+        else:
+            getters[getter_key] = lambda response_body, *args, **kwargs2: list(response_body["values"].keys())
+
+    if getter_value is not None:
+        if isinstance(is_axis, list):
+            def split_factory(bucket_key):
+                def result_split(response_body, *args, **kwargs2):
+                    return response_body["values"][bucket_key]
+
+                return result_split
+
+            for key2 in is_axis:
+                getters[getter_key + "_" + str(key2)] = split_factory(key2)
+        elif is_axis:
+            getters[getter_value] = lambda response_body, bucket_id, *args, **kwargs2: response_body["values"][
+                bucket_id]
+        else:
+            getters[getter_value] = lambda response_body, *args, **kwargs2: list(response_body["values"].values())
+    body = {"percentiles_bucket": {"buckets_path": buckets_path, **({"percents": percents} if percents is not None else {})}}
+    if is_axis and not isinstance(is_axis, list):
+        return {"body": body, "getters": getters, "axis": percentile_axis_maker(None, None)}
+    else:
+        return {"body": body, "getters": getters}
 
 
 def agg_extended_stats(field, script=False, sigma=3,
