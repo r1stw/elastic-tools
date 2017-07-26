@@ -590,7 +590,7 @@ def agg_percentiles_bucket(buckets_path, percents=None, getter_key=None, getter_
                 return result_split
 
             for key2 in is_axis:
-                getters[getter_key + "_" + str(key2)] = split_factory(key2)
+                getters[getter_value + "_" + str(key2)] = split_factory(key2)
         elif is_axis:
             getters[getter_value] = lambda response_body, bucket_id, *args, **kwargs2: response_body["values"][
                 bucket_id]
