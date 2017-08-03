@@ -233,7 +233,7 @@ def flt_or(*filters):
 def flt_eq(field, value):
     if isinstance(value, list):
         return {"terms": {field: value}}
-    elif isinstance(value, str) and value[-1] == '*' and value.count("*") == 1 and value.count("?") == 0:
+    elif isinstance(value, str) and value.count("*") == 1 and value.count("?") == 0 and value[-1] == '*':
         return {"prefix": {field: value[:-1]}}
     elif isinstance(value, str) and value.count("*") + value.count("?") > 0:
         return {"wildcard": {field: value}}
