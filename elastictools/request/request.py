@@ -321,7 +321,7 @@ def agg_reverse_nested(getter=None, **kwargs):
 
 
 @bucket_agg
-def agg_terms(field, script=False, size=10000, min_doc_count=None, order=None, getter_doc_count=None, getter_key=None, is_axis=True, **kwargs):
+def agg_terms(field, script=False, size=10000, min_doc_count=None, order=None, getter_doc_count=None, getter_key=None, is_axis=True, missing=None, **kwargs):
     getters = {}
     add_getter(getters, getter_doc_count, "doc_count")
     add_getter(getters, getter_key, "key")
@@ -371,7 +371,8 @@ def agg_terms(field, script=False, size=10000, min_doc_count=None, order=None, g
     body = {"terms": {
         **{"script" if script else "field": field, "size": size},
         **({"min_doc_count": min_doc_count} if min_doc_count is not None else {}),
-        **({"order": order} if order is not None else {})}
+        **({"order": order} if order is not None else {}),
+        **({"missing": missing} if missing is not None else {})}
     }
     if is_axis and not isinstance(is_axis, list):
         return {"body": body, "getters": getters_new, "getter_updater": getter_updater, "sub_aggs": kwargs, "axis_maker": multi_bucket_axis_maker}
