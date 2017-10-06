@@ -1,4 +1,4 @@
-from elasticsearch import Elasticsearch, RequestsHttpConnection
+from elasticsearch import Elasticsearch, RequestsHttpConnection, TransportError
 import json
 from enum import Enum
 import copy
@@ -16,6 +16,10 @@ class NotExecutedException(Exception):
 
 
 class InvalidResponseException(Exception):
+    pass
+
+
+class ElasticToolsTransportError(Exception):
     pass
 
 
@@ -81,7 +85,10 @@ class Request:
         connection = connections[connection_name]
         if connection.connection is None:
             connection.get_connection()
-        self.response_body = connection.connection.search(**kwargs)
+        try:
+            self.response_body = connection.connection.search(**kwargs)
+        except TransportError:
+            raise ElasticToolsTransportError
         if self.response_body["_shards"]["successful"] == 0:
             raise InvalidResponseException("No shards executes successfully: something wrong with elastcisearch?")
         self.executed = True
@@ -135,7 +142,11 @@ def search(connection_name="default", **kwargs):
     result = Request(kwargs["body"])
     if kwargs["body"] is not None:
         kwargs["body"] = kwargs["body"]["body"]
-    result.response_body = connection.connection.search(**kwargs)
+    try:
+        result.response_body = connection.connection.search(**kwargs)
+    except TransportError:
+        raise ElasticToolsTransportError
+
     return result
 
 
