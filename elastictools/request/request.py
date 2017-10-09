@@ -101,8 +101,10 @@ def multi_bucket_axis_maker(next_axis=None, next_axis_name=None):
             return {0: {}}
         if next_axis_name is None:
             return {i: {} for i in range(len(response_body["buckets"]))}
+        if isinstance(response_body["buckets"], dict):
+            return {i: next_axis(response_body["buckets"][list(response_body["buckets"].keys())[i]][next_axis_name])
+                    for i in range(len(response_body["buckets"]))}
         return {i: next_axis(response_body["buckets"][i][next_axis_name]) for i in range(len(response_body["buckets"]))}
-
     return axis
 
 
