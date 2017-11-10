@@ -19,7 +19,8 @@ def aggregation_linker(aggregation):
     sub_aggs_bodys = {}
 
     if "sub_aggs" in aggregation:
-        sub_aggs_bodys = {key: aggregation["sub_aggs"][key]["body"] for key in aggregation["sub_aggs"]}
+        sub_aggs_bodys = {key: aggregation["sub_aggs"][key]["body"] for key in aggregation["sub_aggs"]
+                          if aggregation["sub_aggs"][key].get("body") is not None}
         for aggr_key, aggr_value in aggregation["sub_aggs"].items():
             for getter_key, getter_value in aggr_value["getters"].items():
                 getters.update(aggregation["getter_updater"](getter_value, aggr_key, getter_key))
@@ -65,7 +66,7 @@ def axis_multi_bucket_getter_updater(getter, key, getter_name):
             return None
         if isinstance(response_body["buckets"], dict):
             bucket_id = list(response_body["buckets"].keys())[bucket_id]
-        return getter(response_body["buckets"][bucket_id][key], *args, **kwargs)
+        return getter(response_body["buckets"][bucket_id].get(key), *args, **kwargs)
     return {getter_name: deeper_getter}
 
 
@@ -144,7 +145,7 @@ def request(query=None, fieldlist=None, sorting=None, **aggs):
     if query is None:
         query = {}
         pass
-    aggs_bodys = {key: aggs[key]["body"] for key in aggs}
+    aggs_bodys = {key: aggs[key]["body"] for key in aggs if aggs[key].get('body')}
     body = {
         **(
             {
@@ -176,7 +177,7 @@ def request(query=None, fieldlist=None, sorting=None, **aggs):
 
     def getter_updater(p_getter, key):
         def deeper_getter(response_body, *args, **kwargs):
-            return p_getter(response_body["aggregations"][key], *args, **kwargs)
+            return p_getter(response_body["aggregations"].get(key), *args, **kwargs)
         return deeper_getter
     getters = {key: getter_updater(aggs[aggr]["getters"][key], aggr) for aggr in aggs for key in aggs[aggr]["getters"]}
     axis = lambda x: {}
@@ -445,6 +446,9 @@ def agg_histogram(field, interval, getter_doc_count=None, getter_key=None, gette
 # VALUE AGGS                                                                                 #
 ##############################################################################################
 
+
+def agg_const(value, getter=None, **kwargs):
+    return {"getters": {getter: lambda *args, **kwargs: value}}
 
 def simple_value_agg(agg):
     def decorated_agg(*args, getter=None, **kwargs):
