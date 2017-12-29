@@ -638,7 +638,7 @@ def agg_extended_stats(field, script=False, sigma=3,
     return {"body": body, "getters": getters}
 
 
-def agg_percentile(field, percents=None, getter_key=None, getter_value=None, is_axis=True, **kwargs):
+def agg_percentile(field, script=False, percents=None, getter_key=None, getter_value=None, is_axis=True, **kwargs):
     getters = {}
 
     if getter_key is not None:
@@ -666,7 +666,7 @@ def agg_percentile(field, percents=None, getter_key=None, getter_value=None, is_
             getters[getter_value] = lambda response_body, bucket_id, *args, **kwargs2: response_body["values"][bucket_id]
         else:
             getters[getter_value] = lambda response_body, *args, **kwargs2: list(response_body["values"].values())
-    body = {"percentiles": {"field": field, **({"percents": percents} if percents is not None else {})}}
+    body = {"percentiles": {("script" if script else "field"): field, **({"percents": percents} if percents is not None else {})}}
     if is_axis and not isinstance(is_axis, list):
         return {"body": body, "getters": getters, "axis": percentile_axis_maker(None, None)}
     else:
