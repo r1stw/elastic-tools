@@ -576,6 +576,15 @@ def agg_bucket_script(buckets_path, script, **kwargs):
     return {"bucket_script": {"buckets_path": buckets_path, "script": script}}
 
 
+@simple_value_agg
+def agg_scripted_metric( map_script, init_script=None, combine_script=None, params=None, reduce_script=None, **kwargs):
+    return {"scripted_metric": {
+        **({"init_script": init_script} if init_script is not None else {}),
+        **({"map_script": map_script} if map_script is not None else {}),
+        **({"combine_script": combine_script} if combine_script is not None else {}),
+        **({"reduce_script": reduce_script} if reduce_script is not None else {}),
+        **({"params": params} if params is not None else {})}}
+
 def agg_percentiles_bucket(buckets_path, percents=None, getter_key=None, getter_value=None, is_axis=True, **kwargs):
     getters = {}
 
