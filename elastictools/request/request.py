@@ -1,3 +1,5 @@
+from functools import wraps
+
 def add_getter(getters, getter_name, field_name, additional_level=None):
     if getter_name is None:
         return
@@ -46,6 +48,7 @@ def aggregation_linker(aggregation):
 
 
 def bucket_agg(func):
+    @wraps
     def decorated_agg(*args, **kwargs):
         return aggregation_linker(func(*args, **kwargs))
     return decorated_agg
@@ -456,7 +459,9 @@ def agg_histogram(field, interval, getter_doc_count=None, getter_key=None, gette
 def agg_const(value, getter=None, **kwargs):
     return {"getters": {getter: lambda *args, **kwargs: value}}
 
+
 def simple_value_agg(agg):
+    @wraps
     def decorated_agg(*args, getter=None, **kwargs):
         getters = {}
         add_getter(getters, getter, "value")
