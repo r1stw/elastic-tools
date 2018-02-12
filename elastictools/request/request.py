@@ -48,7 +48,7 @@ def aggregation_linker(aggregation):
 
 
 def bucket_agg(func):
-    @wraps
+    @wraps(func)
     def decorated_agg(*args, **kwargs):
         return aggregation_linker(func(*args, **kwargs))
     return decorated_agg
@@ -461,7 +461,7 @@ def agg_const(value, getter=None, **kwargs):
 
 
 def simple_value_agg(agg):
-    @wraps
+    @wraps(agg)
     def decorated_agg(*args, getter=None, **kwargs):
         getters = {}
         add_getter(getters, getter, "value")
