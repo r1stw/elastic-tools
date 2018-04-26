@@ -462,9 +462,10 @@ def agg_const(value, getter=None, **kwargs):
 
 def simple_value_agg(agg):
     @wraps(agg)
-    def decorated_agg(*args, getter=None, **kwargs):
+    def decorated_agg(*args, getter=None, getter_as_string=None, **kwargs):
         getters = {}
         add_getter(getters, getter, "value")
+        add_getter(getters, getter_as_string, "value_as_string")
 
         body = agg(*args, **kwargs)
 
