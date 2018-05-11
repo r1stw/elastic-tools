@@ -1,3 +1,5 @@
+from functools import wraps
+
 def add_getter(getters, getter_name, field_name, additional_level=None):
     if getter_name is None:
         return
@@ -46,6 +48,7 @@ def aggregation_linker(aggregation):
 
 
 def bucket_agg(func):
+    @wraps(func)
     def decorated_agg(*args, **kwargs):
         return aggregation_linker(func(*args, **kwargs))
     return decorated_agg
@@ -384,7 +387,7 @@ def agg_terms(field, script=False, size=10000, min_doc_count=None, order=None, g
 
 
 @bucket_agg
-def agg_histogram(field, interval, getter_doc_count=None, getter_key=None, getter_key_as_string=None, date_histogram=False, is_axis=True, **kwargs):
+def agg_histogram(field, interval, getter_doc_count=None, getter_key=None, getter_key_as_string=None, date_histogram=False, is_axis=True, min_doc_count=None, order=None, missing=None, **kwargs):
     getters = {}
     add_getter(getters, getter_doc_count, "doc_count")
     add_getter(getters, getter_key, "key")
@@ -434,7 +437,13 @@ def agg_histogram(field, interval, getter_doc_count=None, getter_key=None, gette
     else:
         getter_updater = plain_multi_bucket_getter_updater
 
-    body = {"date_histogram" if date_histogram else "histogram": {"field": field, "interval": interval}}
+    body = {"date_histogram" if date_histogram else "histogram": {
+        "field": field,
+        "interval": interval,
+        **({"min_doc_count": min_doc_count} if min_doc_count is not None else {}),
+        **({"order": order} if order is not None else {}),
+        **({"missing": missing} if missing is not None else {})
+    }}
 
     if is_axis and not isinstance(is_axis, list):
         return {"body": body, "getters": getters_new, "getter_updater": getter_updater, "sub_aggs": kwargs, "axis_maker": multi_bucket_axis_maker}
@@ -450,10 +459,16 @@ def agg_histogram(field, interval, getter_doc_count=None, getter_key=None, gette
 def agg_const(value, getter=None, **kwargs):
     return {"getters": {getter: lambda *args, **kwargs: value}}
 
+def agg_const(value, getter=None, **kwargs):
+    return {"getters": {getter: lambda *args, **kwargs: value}}
+
+
 def simple_value_agg(agg):
-    def decorated_agg(*args, getter=None, **kwargs):
+    @wraps(agg)
+    def decorated_agg(*args, getter=None, getter_as_string=None, **kwargs):
         getters = {}
         add_getter(getters, getter, "value")
+        add_getter(getters, getter_as_string, "value_as_string")
 
         body = agg(*args, **kwargs)
 
@@ -570,6 +585,15 @@ def agg_bucket_script(buckets_path, script, **kwargs):
     return {"bucket_script": {"buckets_path": buckets_path, "script": script}}
 
 
+@simple_value_agg
+def agg_scripted_metric( map_script, init_script=None, combine_script=None, params=None, reduce_script=None, **kwargs):
+    return {"scripted_metric": {
+        **({"init_script": init_script} if init_script is not None else {}),
+        **({"map_script": map_script} if map_script is not None else {}),
+        **({"combine_script": combine_script} if combine_script is not None else {}),
+        **({"reduce_script": reduce_script} if reduce_script is not None else {}),
+        **({"params": params} if params is not None else {})}}
+
 def agg_percentiles_bucket(buckets_path, percents=None, getter_key=None, getter_value=None, is_axis=True, **kwargs):
     getters = {}
 
@@ -632,7 +656,7 @@ def agg_extended_stats(field, script=False, sigma=3,
     return {"body": body, "getters": getters}
 
 
-def agg_percentile(field, percents=None, getter_key=None, getter_value=None, is_axis=True, **kwargs):
+def agg_percentile(field, script=False, percents=None, getter_key=None, getter_value=None, is_axis=True, **kwargs):
     getters = {}
 
     if getter_key is not None:
@@ -660,7 +684,7 @@ def agg_percentile(field, percents=None, getter_key=None, getter_value=None, is_
             getters[getter_value] = lambda response_body, bucket_id, *args, **kwargs2: response_body["values"][bucket_id]
         else:
             getters[getter_value] = lambda response_body, *args, **kwargs2: list(response_body["values"].values())
-    body = {"percentiles": {"field": field, **({"percents": percents} if percents is not None else {})}}
+    body = {"percentiles": {("script" if script else "field"): field, **({"percents": percents} if percents is not None else {})}}
     if is_axis and not isinstance(is_axis, list):
         return {"body": body, "getters": getters, "axis": percentile_axis_maker(None, None)}
     else:
