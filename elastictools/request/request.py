@@ -1,5 +1,6 @@
 from functools import wraps
 
+
 def add_getter(getters, getter_name, field_name, additional_level=None):
     if getter_name is None:
         return

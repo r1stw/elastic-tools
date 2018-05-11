@@ -20,7 +20,17 @@ class InvalidResponseException(Exception):
 
 
 class ElasticToolsTransportError(Exception):
-    pass
+    """ first arg must be an original status code, second is info string """
+    @property
+    def status_code(self):
+        return next(iter(self.args), None)
+
+    @property
+    def message(self):
+        return next(iter(self.args[1:]), None)
+
+    def __str__(self):
+        return f'{self.status_code}: {self.message}'
 
 
 class Request:
@@ -87,8 +97,8 @@ class Request:
             connection.get_connection()
         try:
             self.response_body = connection.connection.search(**kwargs)
-        except TransportError:
-            raise ElasticToolsTransportError
+        except TransportError as e:
+            raise ElasticToolsTransportError(e.status_code, e.error)
         if self.response_body["_shards"]["successful"] == 0:
             raise InvalidResponseException("No shards executes successfully: something wrong with elastcisearch?")
         self.executed = True
@@ -144,8 +154,8 @@ def search(connection_name="default", **kwargs):
         kwargs["body"] = kwargs["body"]["body"]
     try:
         result.response_body = connection.connection.search(**kwargs)
-    except TransportError:
-        raise ElasticToolsTransportError
+    except TransportError as e:
+        raise ElasticToolsTransportError(e.status_code, e.error)
 
     return result
 
