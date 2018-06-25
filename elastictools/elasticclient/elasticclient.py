@@ -116,7 +116,7 @@ class Credentials:
         self.connection = None
 
     def get_connection(self):
-        if self.auth_type == AuthType.BY_LOGIN:
+        if self.auth_type == AuthType.BY_LOGIN.value:
             self.connection = Elasticsearch(self.host,
                                             connection_class=RequestsHttpConnection,
                                             http_auth=(self.login, self.password), use_ssl=False,
